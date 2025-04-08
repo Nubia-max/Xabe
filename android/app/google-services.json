@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "428700861857",
+    "project_id": "xabe-ai",
+    "storage_bucket": "xabe-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:428700861857:android:3e940103f9bd6d9fdbf7e0",
+        "android_client_info": {
+          "package_name": "com.nubiarabo.rogue_fashion"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "428700861857-9dgkut9qu10q7lq0mk2iejetk1dkk3ab.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nubiarabo.rogue_fashion",
+            "certificate_hash": "076cc4d2ab7f0160fda5af845ac0e92080764795"
+          }
+        },
+        {
+          "client_id": "428700861857-n90h3uu8042qkump10le7l8uuagb0f3r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6rI8AuBIyvtY8j5IAxOZYAWZZXLPAFX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "428700861857-n90h3uu8042qkump10le7l8uuagb0f3r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.nubiarabo.rogueFashion"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

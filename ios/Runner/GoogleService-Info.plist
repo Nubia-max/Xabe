@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCohLl56rLLw0dKQiqJo7O3HEIAnPhDVDc</string>
+	<key>GCM_SENDER_ID</key>
+	<string>428700861857</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.nubiarabo.rogueFashion</string>
+	<key>PROJECT_ID</key>
+	<string>xabe-ai</string>
+	<key>STORAGE_BUCKET</key>
+	<string>xabe-ai.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:428700861857:ios:f376203a49414013dbf7e0</string>
+</dict>
+</plist>

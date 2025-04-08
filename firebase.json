@@ -1,0 +1,53 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "xabe-ai",
+          "appId": "1:428700861857:android:3e940103f9bd6d9fdbf7e0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "xabe-ai",
+          "appId": "1:428700861857:ios:f376203a49414013dbf7e0",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "rogue-fashion-cb0d1",
+          "appId": "1:72113079994:ios:c01ee781539a3ecf082483",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "xabe-ai",
+          "configurations": {
+            "android": "1:428700861857:android:3e940103f9bd6d9fdbf7e0",
+            "ios": "1:428700861857:ios:f376203a49414013dbf7e0",
+            "web": "1:428700861857:web:996ae3b1b7050392dbf7e0"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
