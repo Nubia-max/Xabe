@@ -4,8 +4,9 @@ class Post {
   final String id;
   final String title;
   final String? link;
-  final String? description; // used as caption for non-text posts
+  final String? description;
   final String communityName;
+  final String communityId;
   final String communityProfilePic;
   final int commentCount;
   final String username;
@@ -13,12 +14,12 @@ class Post {
   final String type;
   final DateTime createdAt;
   final List<String> imageUrls;
-  final Map<String, int> userVotes; // for voting
+  final Map<String, int> userVotes;
   final List<String> taggedUsers;
   final Map<String, int> imageVotes;
-  final int likes; // total like count
-  final List<String> likedBy; // list of user IDs who liked this post
-  final DateTime? electionEndTime; // NEW: election end time for carousel2 posts
+  final int likes;
+  final List<String> likedBy;
+  final DateTime? electionEndTime;
 
   Post({
     required this.id,
@@ -26,6 +27,7 @@ class Post {
     this.link,
     this.description,
     required this.communityName,
+    required this.communityId,
     required this.communityProfilePic,
     required this.commentCount,
     required this.username,
@@ -38,7 +40,7 @@ class Post {
     Map<String, int>? imageVotes,
     int? likes,
     List<String>? likedBy,
-    this.electionEndTime, // optional: only used for carousel2 posts
+    this.electionEndTime,
   })  : imageUrls = imageUrls ?? [],
         userVotes = userVotes ?? {},
         taggedUsers = taggedUsers ?? [],
@@ -52,6 +54,7 @@ class Post {
     String? link,
     String? description,
     String? communityName,
+    String? communityId,
     String? communityProfilePic,
     int? commentCount,
     String? username,
@@ -72,6 +75,7 @@ class Post {
       link: link ?? this.link,
       description: description ?? this.description,
       communityName: communityName ?? this.communityName,
+      communityId: communityId ?? this.communityId,
       communityProfilePic: communityProfilePic ?? this.communityProfilePic,
       commentCount: commentCount ?? this.commentCount,
       username: username ?? this.username,
@@ -95,6 +99,7 @@ class Post {
       'link': link,
       'description': description,
       'communityName': communityName,
+      'communityId': communityId,
       'communityProfilePic': communityProfilePic,
       'commentCount': commentCount,
       'username': username,
@@ -118,6 +123,7 @@ class Post {
       link: map['link'] as String?,
       description: map['description'] as String?,
       communityName: map['communityName'] as String? ?? '',
+      communityId: map['communityId'] as String? ?? '',
       communityProfilePic: map['communityProfilePic'] as String? ?? '',
       commentCount: map['commentCount'] as int? ?? 0,
       username: map['username'] as String? ?? 'Unknown',
@@ -149,6 +155,7 @@ class Post {
         other.link == link &&
         other.description == description &&
         other.communityName == communityName &&
+        other.communityId == communityId &&
         other.communityProfilePic == communityProfilePic &&
         other.commentCount == commentCount &&
         other.username == username &&
@@ -158,6 +165,7 @@ class Post {
         listEquals(other.imageUrls, imageUrls) &&
         mapEquals(other.userVotes, userVotes) &&
         listEquals(other.taggedUsers, taggedUsers) &&
+        listEquals(other.likedBy, likedBy) &&
         other.electionEndTime == electionEndTime;
   }
 
@@ -168,6 +176,7 @@ class Post {
         link.hashCode ^
         description.hashCode ^
         communityName.hashCode ^
+        communityId.hashCode ^
         communityProfilePic.hashCode ^
         commentCount.hashCode ^
         username.hashCode ^
@@ -177,6 +186,7 @@ class Post {
         imageUrls.hashCode ^
         userVotes.hashCode ^
         taggedUsers.hashCode ^
+        likedBy.hashCode ^
         electionEndTime.hashCode;
   }
 }

@@ -11,7 +11,7 @@ if (keystorePropertiesFile.exists()) {
 }
 android {
     namespace = "com.nubiarabo.rogue_fashion"
-    compileSdk = 34  // Keep the same compile SDK version
+    compileSdk = 35  // Keep the same compile SDK version
 
     defaultConfig {
         applicationId "com.nubiarabo.rogue_fashion" // Ensure this matches your namespace
@@ -56,7 +56,7 @@ android {
 }
 
 dependencies {
-    implementation platform('com.google.firebase:firebase-bom:33.8.0')
+    implementation platform('com.google.firebase:firebase-bom:33.12.0')
 
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-auth'

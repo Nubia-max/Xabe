@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:get/get.dart';
+import 'package:uuid/uuid.dart';
 import 'package:xabe/core/constants/constants.dart';
 import 'package:xabe/core/utils.dart';
 import 'package:xabe/features/community/repository/community_repository.dart';
@@ -13,15 +16,34 @@ import 'package:xabe/core/failure.dart';
 import 'package:xabe/core/providers/storage_repository.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 
+class CommunityBinding extends Bindings {
+  @override
+  void dependencies() {
+    // Initialize Firestore and FirebaseStorage instances
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final FirebaseStorage firebaseStorage = FirebaseStorage.instance;
+
+    // Register repositories with GetX
+    Get.put<CommunityRepository>(CommunityRepository(firestore: firestore));
+    Get.put<StorageRepository>(
+        StorageRepository(firebaseStorage: firebaseStorage));
+
+    // Register the controller and inject the repositories
+    Get.put<CommunityController>(
+      CommunityController(
+        communityRepository: Get.find<CommunityRepository>(),
+        storageRepository: Get.find<StorageRepository>(),
+      ),
+    );
+  }
+}
+
 class CommunityController extends GetxController {
-  // Reactive loading state.
   var isLoading = false.obs;
 
-  // Dependencies injected via constructor.
   final CommunityRepository communityRepository;
   final StorageRepository storageRepository;
 
-  // Observable list of communities.
   RxList<Community> userCommunities = <Community>[].obs;
 
   CommunityController({
@@ -32,37 +54,83 @@ class CommunityController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Get the current user's uid.
     final uid = AuthController.to.userModel.value?.uid;
     if (uid != null) {
-      debugPrint("CommunityController.onInit: uid = $uid");
-      // Listen to Firebase changes for communities the user belongs to.
       communityRepository.getUserCommunities(uid).listen((communities) {
-        debugPrint("Received ${communities.length} communities from Firestore");
         userCommunities.assignAll(communities);
       });
-    } else {
-      debugPrint(
-          "CommunityController.onInit: uid is null; user might not be authenticated yet.");
     }
   }
 
-  /// Create a new community.
+  Future<void> joinCommunityWithVerification(
+    Community community,
+    BuildContext context,
+    dynamic verificationFileOrData,
+  ) async {
+    final user = AuthController.to.userModel.value;
+    if (user == null) {
+      showSnackBar(context, 'User not found');
+      return;
+    }
+
+    Either<Failure, String> uploadRes;
+    if (kIsWeb) {
+      uploadRes = await storageRepository.storeFileFromBytes(
+        path: 'community_verifications/${community.id}',
+        id: user.uid,
+        bytes: verificationFileOrData,
+      );
+    } else {
+      uploadRes = await storageRepository.storeFile(
+        path: 'community_verifications/${community.id}',
+        id: user.uid,
+        file: verificationFileOrData,
+      );
+    }
+
+    uploadRes.fold(
+      (failure) => showSnackBar(context, failure.message),
+      (verificationImageUrl) async {
+        final res = await communityRepository.requestJoinCommunity(
+          community.id,
+          user.uid,
+        );
+        res.fold(
+          (failure) => showSnackBar(context, failure.message),
+          (_) {
+            for (final modUid in community.mods) {
+              Get.find<NotificationController>().sendNotification(
+                recipientId: modUid,
+                senderId: user.uid,
+                message: "${user.name} wants to join ${community.name}",
+                type: "join_request",
+                communityId: community.id,
+                verificationImageUrl: verificationImageUrl,
+              );
+            }
+            showSnackBar(context, 'Join request sent. Awaiting approval.');
+          },
+        );
+      },
+    );
+  }
+
+  // Create community method
   Future<void> createCommunity(
       String name, String bio, BuildContext context) async {
     isLoading.value = true;
     final String uid = AuthController.to.userModel.value?.uid ?? '';
-    // Create a new Community instance with default values.
+    final String communityId = Uuid().v4();
     Community community = Community(
-      id: name,
+      id: communityId,
       name: name,
-      banner: Constants.bannerDefault,
       avatar: Constants.avatarDefault,
       members: [uid],
       mods: [uid],
       bio: bio,
       pendingMembers: [],
     );
+
     final res = await communityRepository.createCommunity(community);
     isLoading.value = false;
     res.fold(
@@ -74,7 +142,7 @@ class CommunityController extends GetxController {
     );
   }
 
-  /// Join a community.
+  // Method to join community
   Future<void> joinCommunity(Community community, BuildContext context) async {
     final user = AuthController.to.userModel.value;
     if (user == null) {
@@ -89,19 +157,18 @@ class CommunityController extends GetxController {
       showSnackBar(context, 'Your join request is already pending.');
       return;
     }
-    final res = await communityRepository.requestJoinCommunity(
-        community.name, user.uid);
+    final res =
+        await communityRepository.requestJoinCommunity(community.id, user.uid);
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) {
-        // Send notifications to moderators.
         for (final modUid in community.mods) {
           Get.find<NotificationController>().sendNotification(
             recipientId: modUid,
             senderId: user.uid,
             message: "${user.name} wants to join ${community.name}",
             type: "join_request",
-            communityId: community.name,
+            communityId: community.id,
           );
         }
         showSnackBar(context, 'Join request sent. Awaiting approval.');
@@ -111,9 +178,9 @@ class CommunityController extends GetxController {
 
   /// When moderator accepts a join request, send a notification to the user.
   Future<void> acceptJoinRequest(
-      String communityName, String userId, BuildContext context) async {
-    final res =
-        await communityRepository.acceptJoinRequest(communityName, userId);
+      String communityId, String userId, BuildContext context) async {
+    final res = await communityRepository.acceptJoinRequest(
+        communityId, userId); // Accept communityId
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) {
@@ -121,19 +188,18 @@ class CommunityController extends GetxController {
         Get.find<NotificationController>().sendNotification(
           recipientId: userId,
           senderId: AuthController.to.userModel.value?.uid ?? 'moderator',
-          message: " $communityName ",
+          message: "Join request accepted",
           type: "join_accepted",
-          communityId: communityName,
+          communityId: communityId, // Use communityId here
         );
       },
     );
   }
 
-  /// Moderator declines a join request.
   Future<void> declineJoinRequest(
-      String communityName, String userId, BuildContext context) async {
-    final res =
-        await communityRepository.declineJoinRequest(communityName, userId);
+      String communityId, String userId, BuildContext context) async {
+    final res = await communityRepository.declineJoinRequest(
+        communityId, userId); // Decline based on communityId
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) {
@@ -144,9 +210,9 @@ class CommunityController extends GetxController {
 
   /// Fetch community users as a stream of maps containing uid and username.
   Stream<List<Map<String, String>>> fetchCommunityUsers(
-      String communityName) async* {
+      String communityId) async* {
     await for (var userIds
-        in communityRepository.getCommunityUsers(communityName)) {
+        in communityRepository.getCommunityUsers(communityId)) {
       List<Map<String, String>> users = [];
       for (var uid in userIds) {
         final username = await AuthController.to.getUsernameFromUid(uid);
@@ -156,20 +222,16 @@ class CommunityController extends GetxController {
     }
   }
 
-  /// Alias for getCommunityUsers.
-  Stream<List<Map<String, String>>> getCommunityUsers(String communityName) {
-    return fetchCommunityUsers(communityName);
-  }
-
   /// Get communities the current user belongs to.
-  Stream<List<Community>> getUserCommunities() {
-    final uid = AuthController.to.userModel.value?.uid ?? '';
+  Stream<List<Community>> getUserCommunitiesStream() {
+    final uid = AuthController.to.userModel.value?.uid;
+    if (uid == null) return const Stream.empty();
     return communityRepository.getUserCommunities(uid);
   }
 
-  /// Get a community by its name.
-  Stream<Community> getCommunityByName(String name) {
-    return communityRepository.getCommunityByName(name);
+  /// Get a community by its id.
+  Stream<Community> getCommunityById(String id) {
+    return communityRepository.getCommunityById(id);
   }
 
   /// Edit community details.
@@ -184,7 +246,7 @@ class CommunityController extends GetxController {
     if (profileFile != null) {
       final res = await storageRepository.storeFile(
         path: 'communities/profile',
-        id: community.name,
+        id: community.id,
         file: profileFile,
       );
       res.fold(
@@ -195,7 +257,7 @@ class CommunityController extends GetxController {
     if (bannerFile != null) {
       final res = await storageRepository.storeFile(
         path: 'communities/banner',
-        id: community.name,
+        id: community.id,
         file: bannerFile,
       );
       res.fold(
@@ -203,8 +265,15 @@ class CommunityController extends GetxController {
         (downloadUrl) => community = community.copyWith(banner: downloadUrl),
       );
     }
-    community = community.copyWith(bio: bio);
+    // Update mutable fields: bio and name. Note that copyWith preserves the community.id.
+    community = community.copyWith(
+      bio: bio,
+      name: community
+          .name, // The new community name should already be set via copyWith in your edit screen.
+    );
+
     final res = await communityRepository.editCommunity(community);
+
     isLoading.value = false;
     res.fold(
       (failure) => showSnackBar(context, failure.message),
@@ -219,71 +288,17 @@ class CommunityController extends GetxController {
 
   /// Add moderators.
   Future<void> addMods(
-      String communityName, List<String> uids, BuildContext context) async {
-    final res = await communityRepository.addMods(communityName, uids);
+      String communityId, List<String> uids, BuildContext context) async {
+    final res = await communityRepository.addMods(communityId, uids);
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) => Get.back(),
     );
   }
 
-  /// Join a community with verification.
-  Future<void> joinCommunityWithVerification(Community community,
-      BuildContext context, dynamic verificationFileOrData) async {
-    final user = AuthController.to.userModel.value;
-    if (user == null) {
-      showSnackBar(context, 'User not found');
-      return;
-    }
-    Either<Failure, String> uploadRes;
-    if (kIsWeb) {
-      uploadRes = await storageRepository.storeFileFromBytes(
-        path: 'community_verifications/${community.name}',
-        id: user.uid,
-        bytes: verificationFileOrData,
-      );
-    } else {
-      uploadRes = await storageRepository.storeFile(
-        path: 'community_verifications/${community.name}',
-        id: user.uid,
-        file: verificationFileOrData,
-      );
-    }
-    uploadRes.fold(
-      (failure) => showSnackBar(context, failure.message),
-      (verificationImageUrl) async {
-        final res = await communityRepository.requestJoinCommunity(
-            community.name, user.uid);
-        res.fold(
-          (failure) => showSnackBar(context, failure.message),
-          (_) {
-            for (final modUid in community.mods) {
-              Get.find<NotificationController>().sendNotification(
-                recipientId: modUid,
-                senderId: user.uid,
-                message: "${user.name} wants to join ${community.name}",
-                type: "join_request",
-                communityId: community.name,
-                verificationImageUrl: verificationImageUrl,
-              );
-            }
-            showSnackBar(context, 'Join request sent. Awaiting approval.');
-          },
-        );
-      },
-    );
-  }
-
   /// Get posts for a community.
-  Stream<List<Post>> getCommunityPosts(String name) {
-    return communityRepository.getCommunityPosts(name);
-  }
-
-  /// Alternative stream for user's communities.
-  Stream<List<Community>> getUserCommunitiesStream() {
-    final user = AuthController.to.userModel.value;
-    if (user == null) return Stream.value([]);
-    return communityRepository.getUserCommunities(user.uid);
+  Stream<List<Post>> getCommunityPosts(String communityId) {
+    return communityRepository.getCommunityPosts(communityId);
   }
 
   // Optional: Local cache of communities.

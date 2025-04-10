@@ -69,7 +69,7 @@ class SearchCommunityDelegate extends SearchDelegate {
                 backgroundImage: getImageProvider(community.avatar),
               ),
               title: Text(community.name),
-              onTap: () => navigateToCommunity(community.name),
+              onTap: () => navigateToCommunity(community.id),
             );
           },
         );

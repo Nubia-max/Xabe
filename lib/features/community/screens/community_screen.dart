@@ -16,10 +16,10 @@ import 'join_community_verification_screen.dart';
 enum PostFilter { all, elections, campaign }
 
 class CommunityScreen extends StatefulWidget {
-  final String name;
+  final String communityId;
   final String filter;
 
-  const CommunityScreen({Key? key, required this.name, this.filter = ''})
+  const CommunityScreen({Key? key, required this.communityId, this.filter = ''})
       : super(key: key);
 
   @override
@@ -50,7 +50,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final communityStream = communityController.getCommunityByName(widget.name);
+    final communityStream =
+        communityController.getCommunityById(widget.communityId);
     final user = authController.userModel.value;
 
     // Early return if user is null.
@@ -80,12 +81,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   expandedHeight: 10,
                   floating: true,
                   snap: true,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: Image(
-                      image: getImageProvider(community.banner),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
@@ -98,9 +93,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               CircleAvatar(
-                                backgroundImage:
-                                    getImageProvider(community.avatar),
+                                backgroundImage: community.avatar.isEmpty
+                                    ? const AssetImage(
+                                        'assets/images/logo.png') // Add a fallback asset
+                                    : getImageProvider(community.avatar),
                                 radius: 35,
+                                onBackgroundImageError: (_, __) => const AssetImage(
+                                    'assets/images/logo.png'), // Error fallback
                               ),
                               const SizedBox(height: 5),
                               Row(
@@ -119,7 +118,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                     OutlinedButton(
                                       onPressed: () {
                                         Get.toNamed(
-                                            '/mod-tools/${Uri.encodeComponent(widget.name)}');
+                                            '/mod-tools/${Uri.encodeComponent(widget.communityId)}');
                                       },
                                       style: ElevatedButton.styleFrom(
                                         shape: RoundedRectangleBorder(
@@ -129,7 +128,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 25),
                                       ),
-                                      child: const Text('Mod Tools'),
+                                      child: const Text('Admin Tools'),
                                     )
                                   else
                                     OutlinedButton(
@@ -213,7 +212,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
             },
             body: community.members.contains(user.uid)
                 ? StreamBuilder<List<Post>>(
-                    stream: communityController.getCommunityPosts(widget.name),
+                    stream: communityController
+                        .getCommunityPosts(widget.communityId),
                     builder: (context, postSnapshot) {
                       if (postSnapshot.hasError) {
                         return ErrorText(error: postSnapshot.error.toString());

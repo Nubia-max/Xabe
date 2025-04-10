@@ -7,9 +7,10 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get/get.dart';
 import 'package:xabe/core/common/error_text.dart';
 import 'package:xabe/core/common/loader.dart';
-
 import '../../../core/post_card.dart';
+import '../../../models/post_model.dart';
 import '../controller/user_profile_controller.dart';
+import '../../auth/controller/auth_controller.dart';
 
 class UserProfileScreen extends StatelessWidget {
   final String uid;
@@ -35,6 +36,8 @@ class UserProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Retrieve current logged in user.
+    final currentUser = Get.find<AuthController>().userModel.value!;
     final userProfileController = Get.find<UserProfileController>();
     return StreamBuilder(
       stream: userProfileController.getUserData(uid),
@@ -45,99 +48,115 @@ class UserProfileScreen extends StatelessWidget {
         if (!snapshot.hasData) return const Loader();
         final user = snapshot.data!;
         return Scaffold(
-          body: NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverAppBar(
-                  expandedHeight: 250,
-                  floating: true,
-                  snap: true,
-                  flexibleSpace: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: kIsWeb
-                            ? CachedWebImage(
-                                imageUrl: user.banner, fit: BoxFit.cover)
-                            : Image(
-                                image: getImageProvider(user.banner),
-                                fit: BoxFit.cover,
-                              ),
-                      ),
-                      Container(
-                        alignment: Alignment.bottomLeft,
-                        padding: const EdgeInsets.all(20).copyWith(bottom: 70),
-                        child: kIsWeb
-                            ? CachedWebImage(
-                                imageUrl: user.profilePic, fit: BoxFit.cover)
-                            : CircleAvatar(
-                                backgroundImage:
-                                    getImageProvider(user.profilePic),
-                                radius: 45,
-                              ),
-                      ),
-                      Container(
-                        alignment: Alignment.bottomLeft,
-                        padding: const EdgeInsets.all(20),
-                        child: OutlinedButton(
-                          onPressed: () => navigateToEditUser(context),
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 25),
+            body: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverAppBar(
+                      expandedHeight: 250,
+                      floating: true,
+                      snap: true,
+                      flexibleSpace: Stack(
+                        children: [
+                          Container(
+                            alignment: Alignment.bottomLeft,
+                            padding:
+                                const EdgeInsets.all(20).copyWith(bottom: 70),
+                            child: kIsWeb
+                                ? CachedWebImage(
+                                    imageUrl: user.profilePic,
+                                    fit: BoxFit.cover)
+                                : CircleAvatar(
+                                    backgroundImage:
+                                        getImageProvider(user.profilePic),
+                                    radius: 45,
+                                  ),
                           ),
-                          child: const Text("Edit Profile"),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate(
-                      [
-                        Text(
-                          'u/${user.name}',
-                          style: const TextStyle(
-                              fontSize: 19, fontWeight: FontWeight.bold),
-                        ),
-                        if (user.bio.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              user.bio,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.grey),
-                            ),
+                          Container(
+                            alignment: Alignment.bottomLeft,
+                            padding: const EdgeInsets.all(20),
+                            // Conditionally render the edit button only if the currentUser.uid matches uid.
+                            child: currentUser.uid == uid
+                                ? OutlinedButton(
+                                    onPressed: () =>
+                                        navigateToEditUser(context),
+                                    style: ElevatedButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 25),
+                                    ),
+                                    child: const Text("Edit Profile"),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
-                        const SizedBox(height: 10),
-                        const Divider(thickness: 2),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                )
-              ];
-            },
-            body: StreamBuilder<List>(
-              stream: userProfileController.getUserPosts(uid),
-              builder: (context, snapshotPosts) {
-                if (snapshotPosts.hasError) {
-                  return ErrorText(error: snapshotPosts.error.toString());
-                }
-                if (!snapshotPosts.hasData) return const Loader();
-                final posts = snapshotPosts.data!;
-                return ListView.builder(
-                  itemCount: posts.length,
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
-                    return PostCard(post: post);
+                    SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate(
+                          [
+                            Text(
+                              'u/${user.name}',
+                              style: const TextStyle(
+                                  fontSize: 19, fontWeight: FontWeight.bold),
+                            ),
+                            if (user.bio.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  user.bio,
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.grey),
+                                ),
+                              ),
+                            const SizedBox(height: 10),
+                            const Divider(thickness: 2),
+                          ],
+                        ),
+                      ),
+                    )
+                  ];
+                },
+                body: StreamBuilder<List<Post>>(
+                  stream: userProfileController.getUserPosts(
+                      uid), // Ensure this returns a Stream<List<Post>>
+                  builder: (context, snapshotPosts) {
+                    // Check for errors in the stream
+                    if (snapshotPosts.hasError) {
+                      // Display the error message
+                      return ErrorText(
+                        error: snapshotPosts.error.toString(),
+                      );
+                    }
+
+                    // If the data is still loading, show a loader
+                    if (!snapshotPosts.hasData) {
+                      return const Loader(); // Custom loading widget
+                    }
+
+                    // Safely access the list of posts
+                    final posts = snapshotPosts.data!;
+
+                    // If there are no posts, display a message
+                    if (posts.isEmpty) {
+                      return const Center(child: Text('No posts available.'));
+                    }
+
+                    // Return the ListView.builder to display the posts
+                    return ListView.builder(
+                      itemCount: posts.length,
+                      itemBuilder: (context, index) {
+                        final post = posts[index];
+
+                        // Pass the post to your PostCard widget
+                        return PostCard(post: post);
+                      },
+                    );
                   },
-                );
-              },
-            ),
-          ),
-        );
+                )));
       },
     );
   }

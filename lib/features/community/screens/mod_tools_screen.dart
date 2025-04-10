@@ -1,38 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xabe/models/community_model.dart'; // Make sure this import is present
 
 class ModToolsScreen extends StatelessWidget {
-  final String name;
+  final Community community;
+
   const ModToolsScreen({
     super.key,
-    required this.name,
+    required this.community,
   });
 
-  void navigateToEditCommunity() {
-    Get.toNamed('/edit-community/${Uri.encodeComponent(name)}');
+  void navigateToEditCommunity(String communityId) {
+    Get.toNamed('/edit-community/${Uri.encodeComponent(communityId)}');
   }
 
   void navigateToAddMods() {
-    Get.toNamed('/add-mods/${Uri.encodeComponent(name)}');
+    Get.toNamed('/add-mods/${Uri.encodeComponent(community.id)}');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mod Tools'),
+        title: const Text('Admin Tools'),
       ),
       body: Column(
         children: [
           ListTile(
             leading: const Icon(Icons.add_moderator),
-            title: const Text('Add Moderators'),
+            title: const Text('Add Admin'),
             onTap: navigateToAddMods,
           ),
           ListTile(
             leading: const Icon(Icons.edit),
-            title: const Text('Edit Community'),
-            onTap: navigateToEditCommunity,
+            title: const Text('Edit Association'),
+            onTap: () => navigateToEditCommunity(community.id),
           ),
         ],
       ),

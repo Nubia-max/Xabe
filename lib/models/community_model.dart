@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 class Community {
   final String id;
   final String name;
-  final String banner;
   final String avatar;
   final String bio; // New field for bio
   final List<String> members;
@@ -15,7 +14,6 @@ class Community {
   Community({
     required this.id,
     required this.name,
-    required this.banner,
     required this.avatar,
     required this.bio,
     this.pendingMembers = const [],
@@ -39,7 +37,6 @@ class Community {
     return Community(
       id: id ?? this.id,
       name: name ?? this.name,
-      banner: banner ?? this.banner,
       avatar: avatar ?? this.avatar,
       bio: bio ?? this.bio,
       members: members ?? this.members,
@@ -54,7 +51,6 @@ class Community {
     return {
       'id': id,
       'name': name,
-      'banner': banner,
       'nameLower': name.toLowerCase(), // added for case-insensitive search
       'avatar': avatar,
       'bio': bio, // Include bio in the map
@@ -70,7 +66,6 @@ class Community {
     return Community(
       id: map['id'] as String? ?? '',
       name: map['name'] as String? ?? '',
-      banner: map['banner'] as String? ?? '',
       avatar: map['avatar'] as String? ?? '',
       bio: map['bio'] as String? ?? '',
       members: List<String>.from(map['members'] ?? []),
@@ -83,7 +78,7 @@ class Community {
 
   @override
   String toString() {
-    return 'Community(id: $id, name: $name, banner: $banner, avatar: $avatar, bio: $bio, members: $members, mods: $mods, campaignThumbnailUrl: $campaignThumbnailUrl, electionThumbnailUrl: $electionThumbnailUrl)';
+    return 'Community(id: $id, name: $name, avatar: $avatar, bio: $bio, members: $members, mods: $mods, campaignThumbnailUrl: $campaignThumbnailUrl, electionThumbnailUrl: $electionThumbnailUrl)';
   }
 
   @override
@@ -93,7 +88,6 @@ class Community {
     return other is Community &&
         other.id == id &&
         other.name == name &&
-        other.banner == banner &&
         other.avatar == avatar &&
         other.bio == bio &&
         listEquals(other.members, members) &&
@@ -106,7 +100,6 @@ class Community {
   int get hashCode {
     return id.hashCode ^
         name.hashCode ^
-        banner.hashCode ^
         avatar.hashCode ^
         bio.hashCode ^
         members.hashCode ^

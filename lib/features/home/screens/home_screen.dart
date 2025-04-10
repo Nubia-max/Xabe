@@ -146,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget buildCommunities() {
     final communityController = Get.find<CommunityController>();
     return StreamBuilder<List>(
-      stream: communityController.getUserCommunities(),
+      stream: communityController.getUserCommunitiesStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

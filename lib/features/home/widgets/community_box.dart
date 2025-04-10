@@ -28,7 +28,7 @@ class CommunityBox extends StatelessWidget {
 
     return FutureBuilder<List<Post>>(
       future:
-          postController.getPostsForCommunityAndType(community.name, postType),
+          postController.getPostsForCommunityAndType(community.id, postType),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
@@ -159,6 +159,6 @@ class CommunityBox extends StatelessWidget {
 
   void navigateToCommunityWithFilter(String filter) {
     // Navigate to the route "/X/:name" with a parameter "filter".
-    Get.toNamed('/X/${community.name}', parameters: {'filter': filter});
+    Get.toNamed('/X/${community.id}', parameters: {'filter': filter});
   }
 }

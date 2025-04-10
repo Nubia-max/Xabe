@@ -6,7 +6,6 @@ class Constants {
   static const loginEmotePath = 'assets/images/loginEmote.png';
   static const googlePath = 'assets/images/google.png';
 
-  static const bannerDefault = 'assets/images/banner.jpeg';
   static const avatarDefault = 'assets/images/logo.png';
 
   static final List<Widget> tabWidgets = [

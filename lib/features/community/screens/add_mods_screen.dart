@@ -9,8 +9,8 @@ import '../../auth/controller/auth_controller.dart';
 import '../controller/community_controller.dart';
 
 class AddModsScreen extends StatefulWidget {
-  final String name;
-  const AddModsScreen({super.key, required this.name});
+  final String communityId;
+  const AddModsScreen({super.key, required this.communityId});
 
   @override
   _AddModsScreenState createState() => _AddModsScreenState();
@@ -34,7 +34,7 @@ class _AddModsScreenState extends State<AddModsScreen> {
 
   void saveMods() {
     Get.find<CommunityController>()
-        .addMods(widget.name, uids.toList(), context);
+        .addMods(widget.communityId, uids.toList(), context);
   }
 
   @override
@@ -50,7 +50,7 @@ class _AddModsScreenState extends State<AddModsScreen> {
         ],
       ),
       body: StreamBuilder<Community>(
-        stream: communityController.getCommunityByName(widget.name),
+        stream: communityController.getCommunityById(widget.communityId),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return ErrorText(error: snapshot.error.toString());

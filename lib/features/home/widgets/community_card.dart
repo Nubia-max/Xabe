@@ -14,12 +14,12 @@ class CommunityCard extends StatelessWidget {
   /// Navigate to the community screen with a filter parameter.
   void navigateToCommunityWithFilter(String filter) {
     // Navigate to the route "/X/:name" with a parameter "filter".
-    Get.toNamed('/X/${community.name}', parameters: {'filter': filter});
+    Get.toNamed('/X/${community.id}', parameters: {'filter': filter});
   }
 
   /// Navigate to the add-post screen for a given post type.
   void navigateToType(String type) {
-    Get.toNamed('/add-post/$type', parameters: {'community': community.name});
+    Get.toNamed('/add-post/$type', parameters: {'community': community.id});
   }
 
   /// Helper to format a Duration into a short string like "2h 10m"
@@ -71,7 +71,7 @@ class CommunityCard extends StatelessWidget {
                             navigateToType('carousel');
                           } else if (value == 'thumbnails') {
                             Get.toNamed('/add-thumbnails',
-                                parameters: {'community': community.name});
+                                parameters: {'community': community.id});
                           }
                         },
                         itemBuilder: (BuildContext context) {
@@ -121,7 +121,7 @@ class CommunityCard extends StatelessWidget {
                     child: FutureBuilder<List<Post>>(
                       future: Get.find<PostController>()
                           .getPostsForCommunityAndType(
-                              community.name, 'carousel'),
+                              community.id, 'carousel'),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                                 ConnectionState.waiting ||

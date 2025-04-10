@@ -39,7 +39,6 @@ class UserProfileController extends GetxController {
   /// Edit the user profile.
   Future<void> editCommunity({
     File? profileFile,
-    File? bannerFile,
     required BuildContext context,
     required String name,
     required String bio,
@@ -63,14 +62,13 @@ class UserProfileController extends GetxController {
           if (path.contains('profile')) {
             user = user.copyWith(profilePic: r);
           } else {
-            user = user.copyWith(banner: r);
+            user = user.copyWith();
           }
         },
       );
     }
 
     await handleFileUpload(profileFile, 'users/profile');
-    await handleFileUpload(bannerFile, 'users/banner');
 
     // Update the user's name and bio.
     user = user.copyWith(name: name, bio: bio);

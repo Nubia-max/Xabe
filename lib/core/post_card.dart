@@ -14,6 +14,7 @@ import '../features/posts/widgets/like_animation.dart';
 import '../features/posts/widgets/neo_button.dart';
 import 'package:lottie/lottie.dart';
 
+import '../models/community_model.dart';
 import '../models/post_model.dart';
 import '../theme/pallete.dart';
 
@@ -149,7 +150,8 @@ class _PostCardState extends State<PostCard>
   }
 
   void navigateToCommunity() async {
-    await Get.toNamed('/X/${widget.post.communityName}');
+    await Get.toNamed(
+        '/X/${widget.post.communityId}'); // Use communityId instead of name
   }
 
   void navigateToComments() async {
@@ -236,11 +238,20 @@ class _PostCardState extends State<PostCard>
                                       children: [
                                         GestureDetector(
                                           onTap: navigateToCommunity,
-                                          child: CircleAvatar(
+                                          child: // Update the CircleAvatar for community profile
+                                              CircleAvatar(
                                             backgroundImage: getImageProvider(
                                                 widget
                                                     .post.communityProfilePic),
                                             radius: 16,
+                                            onBackgroundImageError: (_, __) =>
+                                                const AssetImage(
+                                                    'assets/images/logo.png'),
+                                            child: widget.post
+                                                    .communityProfilePic.isEmpty
+                                                ? const Icon(Icons
+                                                    .group) // Fallback icon
+                                                : null,
                                           ),
                                         ),
                                         Padding(
@@ -250,12 +261,50 @@ class _PostCardState extends State<PostCard>
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                widget.post.communityName,
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                              StreamBuilder<Community>(
+                                                stream: widget.post.communityId
+                                                        .isNotEmpty
+                                                    ? Get.find<
+                                                            CommunityController>()
+                                                        .getCommunityById(widget
+                                                            .post
+                                                            .communityId) // Fetch community only if the ID is not empty
+                                                    : Stream.error(
+                                                        'Invalid community ID'), // Handle invalid communityId
+                                                builder: (context, snapshot) {
+                                                  // If the stream is still loading, show a loading indicator
+                                                  if (snapshot
+                                                          .connectionState ==
+                                                      ConnectionState.waiting) {
+                                                    return const CircularProgressIndicator();
+                                                  }
+
+                                                  // If there was an error fetching data, display the error
+                                                  if (snapshot.hasError) {
+                                                    return Text(
+                                                        'Error: ${snapshot.error}');
+                                                  }
+
+                                                  // If there's no community data, display a message
+                                                  if (!snapshot.hasData) {
+                                                    return const Text(
+                                                        'Community not found');
+                                                  }
+
+                                                  // When data is available, display the community's name
+                                                  final community =
+                                                      snapshot.data!;
+
+                                                  return Text(
+                                                    community
+                                                        .name, // Display the community name
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                               GestureDetector(
                                                 onTap: navigateToUser,
@@ -267,7 +316,7 @@ class _PostCardState extends State<PostCard>
                                               ),
                                             ],
                                           ),
-                                        ),
+                                        )
                                       ],
                                     ),
                                     Row(
@@ -386,13 +435,18 @@ class _PostCardState extends State<PostCard>
                                                             errorBuilder:
                                                                 (context, error,
                                                                     stackTrace) {
-                                                              return const Center(
-                                                                child: Icon(
-                                                                  Icons
-                                                                      .broken_image,
-                                                                  size: 50,
-                                                                  color: Colors
-                                                                      .grey,
+                                                              return Container(
+                                                                // Replace with a placeholder
+                                                                color: Colors
+                                                                    .grey[200],
+                                                                child:
+                                                                    const Center(
+                                                                  child: Icon(
+                                                                      Icons
+                                                                          .broken_image,
+                                                                      size: 50,
+                                                                      color: Colors
+                                                                          .grey),
                                                                 ),
                                                               );
                                                             },
@@ -617,7 +671,7 @@ class _PostCardState extends State<PostCard>
                                             StreamBuilder(
                                               stream: Get.find<
                                                       CommunityController>()
-                                                  .getCommunityByName(widget
+                                                  .getCommunityById(widget
                                                       .post.communityName),
                                               builder: (context, snapshot) {
                                                 if (snapshot.hasData) {
@@ -791,6 +845,10 @@ class _PostCardState extends State<PostCard>
 }
 
 ImageProvider getImageProvider(String imageUrl) {
+  if (imageUrl.isEmpty) {
+    return const AssetImage(
+        'assets/images/logo.png'); // Fallback for empty URLs
+  }
   if (imageUrl.startsWith('http')) {
     return CachedNetworkImageProvider(imageUrl);
   } else {

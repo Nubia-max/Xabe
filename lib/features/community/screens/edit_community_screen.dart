@@ -13,8 +13,8 @@ import 'package:xabe/models/community_model.dart';
 import '../controller/community_controller.dart';
 
 class EditCommunityScreen extends StatefulWidget {
-  final String name;
-  const EditCommunityScreen({super.key, required this.name});
+  final String communityId;
+  const EditCommunityScreen({super.key, required this.communityId});
 
   @override
   State<EditCommunityScreen> createState() => _EditCommunityScreenState();
@@ -25,17 +25,21 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   Uint8List? bannerBytes;
   File? profileFile;
   Uint8List? profileBytes;
+
   late TextEditingController bioController;
+  late TextEditingController communityNameController;
 
   @override
   void initState() {
     super.initState();
     bioController = TextEditingController();
+    communityNameController = TextEditingController();
   }
 
   @override
   void dispose() {
     bioController.dispose();
+    communityNameController.dispose();
     super.dispose();
   }
 
@@ -68,11 +72,15 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   }
 
   void save(Community community) {
+    // Update the community model with the new name before saving.
+    final updatedCommunity = community.copyWith(
+      name: communityNameController.text.trim(),
+    );
     Get.find<CommunityController>().editCommunity(
       profileFile: profileFile,
       bannerFile: bannerFile,
       context: context,
-      community: community,
+      community: updatedCommunity,
       bio: bioController.text.trim(),
     );
   }
@@ -83,19 +91,25 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     // Use your theme controller if available; otherwise, fallback to Theme.of(context).
     final currentTheme = Theme.of(context);
     return StreamBuilder<Community>(
-      stream: communityController.getCommunityByName(widget.name),
+      stream: communityController.getCommunityById(widget.communityId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorText(error: snapshot.error.toString());
         }
         if (!snapshot.hasData) return const Loader();
         final community = snapshot.data!;
+
+        // Initialize controllers on first load if not already set.
         if (bioController.text.isEmpty) {
           bioController.text = community.bio;
         }
+        if (communityNameController.text.isEmpty) {
+          communityNameController.text = community.name;
+        }
+
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Edit Community'),
+            title: const Text('Edit Association'),
             centerTitle: false,
             actions: [
               TextButton(
@@ -113,72 +127,78 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Add label for banner
-                        const Text(
-                          'edit banner',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                         const SizedBox(height: 8),
+                        // Banner/Profile section.
                         SizedBox(
                           height: 200,
                           child: Stack(
                             children: [
-                              GestureDetector(
-                                onTap: selectBannerImage,
-                                child: DottedBorder(
-                                  borderType: BorderType.RRect,
-                                  radius: const Radius.circular(10),
-                                  dashPattern: const [10, 4],
-                                  strokeCap: StrokeCap.round,
-                                  child: Container(
-                                    width: double.infinity,
-                                    height: 150,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: bannerFile != null
-                                        ? Image.file(bannerFile!)
-                                        : (community.banner.isEmpty ||
-                                                community.banner ==
-                                                    Constants.bannerDefault)
-                                            ? const Center(
-                                                child: Icon(
-                                                  Icons.camera_alt_outlined,
-                                                  size: 40,
-                                                ),
-                                              )
-                                            : Image.network(community.banner),
-                                  ),
-                                ),
-                              ),
                               Positioned(
                                 bottom: 20,
                                 left: 20,
                                 child: GestureDetector(
                                   onTap: selectProfileImage,
-                                  child: profileFile != null
-                                      ? CircleAvatar(
-                                          backgroundImage:
-                                              FileImage(profileFile!),
-                                          radius: 32,
-                                        )
-                                      : CircleAvatar(
-                                          backgroundImage: getImageProvider(
-                                              community.avatar),
-                                          radius: 32,
+                                  child: Stack(
+                                    children: [
+                                      profileFile != null
+                                          ? CircleAvatar(
+                                              backgroundImage:
+                                                  FileImage(profileFile!),
+                                              radius: 32,
+                                            )
+                                          : CircleAvatar(
+                                              backgroundImage: getImageProvider(
+                                                  community.avatar),
+                                              radius: 32,
+                                            ),
+                                      // Overlay the camera icon.
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: CircleAvatar(
+                                          radius: 12,
+                                          backgroundColor: Colors.white,
+                                          child: Icon(
+                                            Icons.camera_alt,
+                                            size: 16,
+                                            color: Colors.black,
+                                          ),
                                         ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Add label for bio
+                        // Add field to edit the community name.
                         const Text(
-                          'bio',
+                          'Community Name',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: communityNameController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            hintText: 'Enter Community Name',
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: const BorderSide(color: Colors.blue),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.all(18),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // Bio field.
+                        const Text(
+                          'Bio',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

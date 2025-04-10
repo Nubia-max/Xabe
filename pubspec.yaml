@@ -26,7 +26,7 @@ dependencies:
   routemaster: ^1.0.1
   fpdart: ^1.1.1
   dotted_border: ^2.1.0
-  file_picker: ^8.1.7
+  file_picker: ^10.0.0
   any_link_preview: ^3.0.3
   uuid: ^4.5.1
   intl: ^0.20.1
@@ -65,7 +65,6 @@ flutter:
     - assets/images/logo.png
     - assets/animations/loginanimation.json
     - assets/animations/voteanimation.json
-    - assets/images/groupicon.png
     - assets/images/banner.jpeg
 
   fonts:

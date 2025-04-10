@@ -12,10 +12,10 @@ class CommunityRepository {
   CommunityRepository({required FirebaseFirestore firestore})
       : _firestore = firestore;
 
-  // Request to join a community (adds user UID to pendingMembers)
-  FutureVoid requestJoinCommunity(String communityName, String userId) async {
+  // Request to join a community (uses community ID)
+  FutureVoid requestJoinCommunity(String communityId, String userId) async {
     try {
-      return right(_communities.doc(communityName).update({
+      return right(_communities.doc(communityId).update({
         'pendingMembers': FieldValue.arrayUnion([userId]),
       }));
     } catch (e) {
@@ -23,10 +23,10 @@ class CommunityRepository {
     }
   }
 
-  // Moderator accepts a join request
-  FutureVoid acceptJoinRequest(String communityName, String userId) async {
+  // Moderator accepts a join request (uses community ID)
+  FutureVoid acceptJoinRequest(String communityId, String userId) async {
     try {
-      await _communities.doc(communityName).update({
+      await _communities.doc(communityId).update({
         'pendingMembers': FieldValue.arrayRemove([userId]),
         'members': FieldValue.arrayUnion([userId]),
       });
@@ -36,10 +36,10 @@ class CommunityRepository {
     }
   }
 
-  // Moderator declines a join request
-  FutureVoid declineJoinRequest(String communityName, String userId) async {
+  // Moderator declines a join request (uses community ID)
+  FutureVoid declineJoinRequest(String communityId, String userId) async {
     try {
-      return right(_communities.doc(communityName).update({
+      return right(_communities.doc(communityId).update({
         'pendingMembers': FieldValue.arrayRemove([userId]),
       }));
     } catch (e) {
@@ -47,23 +47,35 @@ class CommunityRepository {
     }
   }
 
-  // Create a community.
+  // Create a community with UUID as document ID
   FutureVoid createCommunity(Community community) async {
     try {
-      var communityDoc = await _communities.doc(community.name).get();
-      if (communityDoc.exists) {
+      // Check for existing community name (name must still be unique)
+      final querySnapshot =
+          await _communities.where('name', isEqualTo: community.id).get();
+      if (querySnapshot.docs.isNotEmpty) {
         throw 'Association with the same name already exists!';
       }
-      return right(_communities.doc(community.name).set(community.toMap()));
+      // Save using UUID as document ID
+      return right(_communities.doc(community.id).set(community.toMap()));
     } catch (e) {
       return left(Failure(e.toString()));
     }
   }
 
-  // Join community (adds user to members).
-  FutureVoid joinCommunity(String communityName, String userId) async {
+  // Edit community using UUID
+  FutureVoid editCommunity(Community community) async {
     try {
-      return right(_communities.doc(communityName).update({
+      return right(_communities.doc(community.id).update(community.toMap()));
+    } catch (e) {
+      return left(Failure(e.toString()));
+    }
+  }
+
+  // Join community using UUID
+  FutureVoid joinCommunity(String communityId, String userId) async {
+    try {
+      return right(_communities.doc(communityId).update({
         'members': FieldValue.arrayUnion([userId]),
       }));
     } catch (e) {
@@ -71,10 +83,10 @@ class CommunityRepository {
     }
   }
 
-  // Leave community (removes user from members).
-  FutureVoid leaveCommunity(String communityName, String userId) async {
+  // Leave community using UUID
+  FutureVoid leaveCommunity(String communityId, String userId) async {
     try {
-      return right(_communities.doc(communityName).update({
+      return right(_communities.doc(communityId).update({
         'members': FieldValue.arrayRemove([userId]),
       }));
     } catch (e) {
@@ -82,80 +94,71 @@ class CommunityRepository {
     }
   }
 
-  // Get community users.
-  Stream<List<String>> getCommunityUsers(String communityName) {
-    return _communities.doc(communityName).snapshots().map((snapshot) {
+  // Get community users by UUID
+  Stream<List<String>> getCommunityUsers(String communityId) {
+    return _communities.doc(communityId).snapshots().map((snapshot) {
       if (snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>;
-        List<String> members = List<String>.from(data['members'] ?? []);
-        return members;
+        return List<String>.from(data['members'] ?? []);
       }
       return [];
     });
   }
 
-  // Get communities for a user.
+  // Get communities for a user (unchanged)
   Stream<List<Community>> getUserCommunities(String uid) {
-    return _communities
-        .where('members', arrayContains: uid)
-        .snapshots()
-        .map((event) {
-      List<Community> communities = [];
-      for (var doc in event.docs) {
-        communities.add(Community.fromMap(doc.data() as Map<String, dynamic>));
-      }
-      return communities;
-    });
+    return _communities.where('members', arrayContains: uid).snapshots().map(
+        (event) => event.docs
+            .map((doc) => Community.fromMap(doc.data() as Map<String, dynamic>))
+            .toList());
   }
 
-  // Get a community by name.
-  Stream<Community> getCommunityByName(String name) {
-    return _communities.doc(name).snapshots().map(
-          (event) => Community.fromMap(event.data() as Map<String, dynamic>),
-        );
-  }
-
-  // Edit community.
-  FutureVoid editCommunity(Community community) async {
-    try {
-      return right(_communities.doc(community.name).update(community.toMap()));
-    } catch (e) {
-      return left(Failure(e.toString()));
+  // Get community by UUID
+  Stream<Community> getCommunityById(String communityId) {
+    if (communityId.isEmpty) {
+      // Handle the case where the communityId is empty or invalid
+      throw ArgumentError("Community ID cannot be empty");
     }
+
+    return _communities.doc(communityId).snapshots().map(
+      (snapshot) {
+        if (snapshot.exists) {
+          // If the document exists, convert Firestore data into a Community object
+          return Community.fromMap(snapshot.data()! as Map<String, dynamic>);
+        } else {
+          // Handle the case where the community does not exist
+          throw Exception("Community not found");
+        }
+      },
+    );
   }
 
-  // Search communities with a case-insensitive query.
+  // Search communities by name (unchanged)
   Stream<List<Community>> searchCommunity(String query) {
     final lowerQuery = query.toLowerCase();
     return _communities
         .where('nameLower', isGreaterThanOrEqualTo: lowerQuery)
         .where('nameLower', isLessThanOrEqualTo: lowerQuery + '\uf8ff')
         .snapshots()
-        .map((event) {
-      List<Community> communities = [];
-      for (var community in event.docs) {
-        communities
-            .add(Community.fromMap(community.data() as Map<String, dynamic>));
-      }
-      return communities;
-    });
+        .map((event) => event.docs
+            .map((doc) => Community.fromMap(doc.data() as Map<String, dynamic>))
+            .toList());
   }
 
-  // Add moderators.
-  FutureVoid addMods(String communityName, List<String> uids) async {
+  // Add moderators using UUID
+  FutureVoid addMods(String communityId, List<String> uids) async {
     try {
-      return right(_communities.doc(communityName).update({
-        'mods': uids,
-      }));
+      return right(_communities.doc(communityId).update({'mods': uids}));
     } catch (e) {
       return left(Failure(e.toString()));
     }
   }
 
-  // Get posts for a community.
-  Stream<List<Post>> getCommunityPosts(String name) {
+  // Get posts for a community using UUID
+  Stream<List<Post>> getCommunityPosts(String communityId) {
     return _posts
-        .where('communityName', isEqualTo: name)
+        .where('communityId',
+            isEqualTo: communityId) // Changed from communityName
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((event) => event.docs
@@ -163,6 +166,7 @@ class CommunityRepository {
             .toList());
   }
 
+  // Firestore references
   CollectionReference get _communities =>
       _firestore.collection(FirebaseConstants.communitiesCollection);
 

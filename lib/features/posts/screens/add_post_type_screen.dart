@@ -62,8 +62,9 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       builder: (context) {
         String searchQuery = "";
         return StreamBuilder<List<Map<String, String>>>(
+          // Use fetchCommunityUsers instead of getCommunityUsers
           stream: Get.find<CommunityController>()
-              .getCommunityUsers(selectedCommunity!.name),
+              .fetchCommunityUsers(selectedCommunity!.id), // Correct method
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return AlertDialog(
@@ -338,7 +339,13 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Post Screen'),
+        title: Text(
+          widget.type == 'carousel2'
+              ? 'Campaign'
+              : widget.type == 'carousel'
+                  ? 'Election'
+                  : '',
+        ),
         actions: [
           TextButton(
             onPressed: sharePost,
@@ -359,7 +366,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                   controller: titleController,
                   decoration: const InputDecoration(
                     filled: true,
-                    hintText: 'Election post here',
+                    hintText: 'Election title',
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.all(18),
                   ),
@@ -545,29 +552,33 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                                             bottom: 10,
                                             left: 10,
                                             child: Wrap(
-                                              children:
-                                                  taggedUsers[index].map((uid) {
-                                                return Container(
-                                                  padding:
-                                                      const EdgeInsets.all(4),
-                                                  margin: const EdgeInsets.only(
-                                                      right: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black
-                                                        .withOpacity(0.5),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            4),
-                                                  ),
-                                                  child: Text(
-                                                    taggedUsernames[uid] ??
-                                                        'Fetching...',
-                                                    style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 12),
-                                                  ),
-                                                );
-                                              }).toList(),
+                                              children: taggedUsers[index]
+                                                  .map((uid) => Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(4),
+                                                        margin: const EdgeInsets
+                                                            .only(right: 4),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors.black
+                                                              .withOpacity(0.5),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          taggedUsernames[
+                                                                  uid] ??
+                                                              'Fetching...',
+                                                          style:
+                                                              const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ))
+                                                  .toList(),
                                             ),
                                           ),
                                       ],

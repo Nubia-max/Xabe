@@ -18,7 +18,7 @@ class CommunityListDrawer extends StatelessWidget {
   }
 
   void navigateToCommunity(Community community) async {
-    await Get.toNamed('/X/${community.name}',
+    await Get.toNamed('/X/${community.id}',
         parameters: {'filter': 'All Posts'});
   }
 
@@ -34,14 +34,15 @@ class CommunityListDrawer extends StatelessWidget {
             isGuest
                 ? const SignInButton(isFromLogin: false)
                 : ListTile(
-                    title: const Text('Create association'),
+                    title: const Text('Create Association'),
                     leading: const Icon(Icons.add),
                     onTap: navigateToCreateCommunity,
                   ),
             if (!isGuest)
               // Assuming CommunityController.getUserCommunities() returns a Stream<List<Community>>
               StreamBuilder<List>(
-                stream: Get.find<CommunityController>().getUserCommunities(),
+                stream:
+                    Get.find<CommunityController>().getUserCommunitiesStream(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return ErrorText(error: snapshot.error.toString());

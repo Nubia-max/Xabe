@@ -150,12 +150,13 @@ class PostController extends GetxController {
     final Post post = Post(
       id: postId,
       title: title,
-      communityName: selectedCommunity.name,
+      communityName: selectedCommunity.id,
       communityProfilePic: selectedCommunity.avatar,
       commentCount: 0,
       username: user.name,
       uid: user.uid,
-      type: 'text',
+      type:
+          'text', // Make sure the type is correctly assigned (image, text, link, etc.)
       createdAt: DateTime.now(),
       description: description,
       imageUrls: [],
@@ -164,7 +165,8 @@ class PostController extends GetxController {
       imageVotes: {},
       taggedUsers: [],
       link: '',
-      electionEndTime: DateTime.now(), // Adjust or remove if not needed.
+      electionEndTime: DateTime.now(),
+      communityId: selectedCommunity.id, // Ensure communityId is set correctly
     );
 
     final res = await _postRepository.addPost(post);
@@ -179,9 +181,9 @@ class PostController extends GetxController {
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
-              message: "New text post in ${selectedCommunity.name}: $title",
+              message: "New post in ${selectedCommunity.id}: $title",
               type: "new_post",
-              communityId: selectedCommunity.name,
+              communityId: selectedCommunity.id,
             );
           }
         }
@@ -203,7 +205,7 @@ class PostController extends GetxController {
     final Post post = Post(
       id: postId,
       title: title,
-      communityName: selectedCommunity.name,
+      communityName: selectedCommunity.id,
       communityProfilePic: selectedCommunity.avatar,
       commentCount: 0,
       username: user.name,
@@ -217,7 +219,7 @@ class PostController extends GetxController {
       userVotes: {},
       imageVotes: {},
       taggedUsers: [],
-      electionEndTime: DateTime.now(), // Adjust as needed.
+      electionEndTime: DateTime.now(), communityId: '', // Adjust as needed.
     );
 
     final res = await _postRepository.addPost(post);
@@ -232,9 +234,9 @@ class PostController extends GetxController {
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
-              message: "New text post in ${selectedCommunity.name}: $title",
+              message: "New post in ${selectedCommunity.id}: $title",
               type: "new_post",
-              communityId: selectedCommunity.name,
+              communityId: selectedCommunity.id,
             );
           }
         }
@@ -280,8 +282,8 @@ class PostController extends GetxController {
     final user = Get.find<AuthController>().userModel.value!;
 
     // For carousel posts (non-carousel2), only moderators can post.
-    if (!isCarousel2 && selectedCommunity.name != "My Profile") {
-      final community = await getCommunityByName(selectedCommunity.name).first;
+    if (!isCarousel2 && selectedCommunity.id != "My Profile") {
+      final community = await getCommunityById(selectedCommunity.id).first;
       if (!community.mods.contains(user.uid)) {
         showSnackBar(
             context, 'Only moderators can conduct elections in community.');
@@ -313,19 +315,25 @@ class PostController extends GetxController {
         // Generate a unique id for this image.
         String uniqueId = '$postId\_$i';
         uploadFutures.add(_storageRepository.storeFileFromBytes(
-          path: 'posts/${selectedCommunity.name}',
+          path: 'posts/${selectedCommunity.id}',
           id: uniqueId,
           bytes: fileBytes,
           index: i,
         ));
       } else {
-        // For mobile: files[i] is assumed to be Uint8List.
+        // For mobile:
         String uniqueId = '$postId\_$i';
-        File fileToUpload = _convertUint8ListToFile(files[i], 'image_$i.jpg');
-        // Compress the file before uploading.
+        File fileToUpload;
+        if (files[i] is File) {
+          fileToUpload = files[i];
+        } else if (files[i] is Uint8List) {
+          fileToUpload = _convertUint8ListToFile(files[i], 'image_$i.jpg');
+        } else {
+          continue;
+        }
         File? compressedFile = await compressImage(fileToUpload);
         uploadFutures.add(_storageRepository.storeFile(
-          path: 'posts/${selectedCommunity.name}',
+          path: 'posts/${selectedCommunity.id}',
           id: uniqueId,
           file: compressedFile,
           index: i,
@@ -360,6 +368,7 @@ class PostController extends GetxController {
       userVotes: {},
       imageVotes: {},
       link: '',
+      communityId: selectedCommunity.id,
     );
     final res = await _postRepository.addPost(post);
     res.fold(
@@ -377,9 +386,9 @@ class PostController extends GetxController {
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
-              message: "New text post in ${selectedCommunity.name}: $title",
+              message: "New post in ${selectedCommunity.id}: $title",
               type: "new_post",
-              communityId: selectedCommunity.name,
+              communityId: selectedCommunity.id,
             );
           }
         }
@@ -404,7 +413,7 @@ class PostController extends GetxController {
       fileToUpload = await compressImage(file);
     }
     final imageRes = await _storageRepository.storeFile(
-      path: 'posts/${selectedCommunity.name}',
+      path: 'posts/${selectedCommunity.id}',
       id: postId,
       file: fileToUpload,
     );
@@ -429,7 +438,7 @@ class PostController extends GetxController {
         userVotes: {},
         imageVotes: {},
         taggedUsers: [],
-        electionEndTime: DateTime.now(), // Adjust as needed.
+        electionEndTime: DateTime.now(), communityId: '', // Adjust as needed.
       );
       final res = await _postRepository.addPost(post);
       setLoading(false);
@@ -443,9 +452,9 @@ class PostController extends GetxController {
               Get.find<NotificationController>().sendNotification(
                 recipientId: member,
                 senderId: user.uid,
-                message: "New text post in ${selectedCommunity.name}: $title",
+                message: "New post in ${selectedCommunity.id}: $title",
                 type: "new_post",
-                communityId: selectedCommunity.name,
+                communityId: selectedCommunity.id,
               );
             }
           }
@@ -484,10 +493,10 @@ class PostController extends GetxController {
   }
 
   /// Returns a stream of a community by its name.
-  Stream<Community> getCommunityByName(String communityName) {
+  Stream<Community> getCommunityById(String id) {
     return FirebaseFirestore.instance
         .collection(FirebaseConstants.communitiesCollection)
-        .doc(communityName)
+        .doc(id)
         .snapshots()
         .map((doc) => Community.fromMap(doc.data() as Map<String, dynamic>));
   }
@@ -521,10 +530,10 @@ class PostController extends GetxController {
 
   /// Fetch posts for a community and type from Firestore.
   Future<List<Post>> getPostsForCommunityAndType(
-      String communityName, String type) async {
+      String communityId, String type) async {
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection(FirebaseConstants.postsCollection)
-        .where('communityName', isEqualTo: communityName)
+        .where('communityId', isEqualTo: communityId) // Use communityId here
         .where('type', isEqualTo: type)
         .orderBy('createdAt', descending: true)
         .get();
@@ -532,11 +541,11 @@ class PostController extends GetxController {
         .map((doc) => Post.fromMap(doc.data() as Map<String, dynamic>))
         .toList();
   }
-}
 
-/// Helper to convert Uint8List to File.
-File _convertUint8ListToFile(Uint8List bytes, String fileName) {
-  final file = File('${Directory.systemTemp.path}/$fileName');
-  file.writeAsBytesSync(bytes);
-  return file;
+  /// Helper to convert Uint8List to File.
+  File _convertUint8ListToFile(Uint8List bytes, String fileName) {
+    final file = File('${Directory.systemTemp.path}/$fileName');
+    file.writeAsBytesSync(bytes);
+    return file;
+  }
 }

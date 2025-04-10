@@ -19,8 +19,6 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  File? bannerFile;
-  Uint8List? bannerBytes;
   File? profileFile;
   Uint8List? profileBytes;
   late TextEditingController nameController;
@@ -46,23 +44,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void selectBannerImage() async {
-    final res = await pickImage();
-    if (res != null) {
-      if (kIsWeb) {
-        if (!mounted) return;
-        setState(() {
-          bannerBytes = res.files.first.bytes;
-        });
-      } else {
-        if (!mounted) return;
-        setState(() {
-          bannerFile = File(res.files.first.path!);
-        });
-      }
-    }
-  }
-
   void selectProfileImage() async {
     final res = await pickImage();
     if (res != null) {
@@ -77,7 +58,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // Call the edit method from your UserProfileController.
     Get.find<UserProfileController>().editCommunity(
       profileFile: profileFile,
-      bannerFile: bannerFile,
       context: context,
       name: nameController.text.trim(),
       bio: bioController.text.trim(),
@@ -130,57 +110,51 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
                     children: [
+                      // Inside the SizedBox (height: 200) of your build method:
                       SizedBox(
                         height: 200,
                         child: Stack(
                           children: [
-                            GestureDetector(
-                              onTap: selectBannerImage,
-                              child: DottedBorder(
-                                borderType: BorderType.RRect,
-                                radius: const Radius.circular(10),
-                                dashPattern: const [10, 4],
-                                strokeCap: StrokeCap.round,
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 150,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: bannerFile != null
-                                      ? Image.file(bannerFile!)
-                                      : user.banner.isEmpty ||
-                                              user.banner ==
-                                                  Constants.bannerDefault
-                                          ? const Center(
-                                              child: Icon(
-                                                  Icons.camera_alt_outlined,
-                                                  size: 40))
-                                          : Image.network(user.banner),
-                                ),
-                              ),
-                            ),
                             Positioned(
                               bottom: 20,
                               left: 20,
                               child: GestureDetector(
                                 onTap: selectProfileImage,
-                                child: profileFile != null
-                                    ? CircleAvatar(
-                                        backgroundImage:
-                                            FileImage(profileFile!),
-                                        radius: 32,
-                                      )
-                                    : CircleAvatar(
-                                        backgroundImage:
-                                            getImageProvider(user.profilePic),
-                                        radius: 32,
+                                child: Stack(
+                                  children: [
+                                    profileFile != null
+                                        ? CircleAvatar(
+                                            backgroundImage:
+                                                FileImage(profileFile!),
+                                            radius: 32,
+                                          )
+                                        : CircleAvatar(
+                                            backgroundImage: getImageProvider(
+                                                user.profilePic),
+                                            radius: 32,
+                                          ),
+                                    // Overlay the camera icon
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: Colors.white,
+                                        child: Icon(
+                                          Icons.camera_alt,
+                                          size: 16,
+                                          color: Colors.black,
+                                        ),
                                       ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
+
                       TextField(
                         controller: nameController,
                         decoration: InputDecoration(

@@ -17,6 +17,7 @@ import 'package:xabe/responsive/responsive_layout.dart';
 import 'package:xabe/responsive/web_screen_layout.dart';
 import 'package:flutter/material.dart';
 
+import 'features/community/controller/community_controller.dart';
 import 'features/home/widgets/add_thumbnails.dart';
 
 final List<GetPage> appRoutes = [
@@ -25,7 +26,7 @@ final List<GetPage> appRoutes = [
     name: '/login',
     page: () => const LoginScreen(),
   ),
-  // Home Screen wrapped in ResponsiveLayout
+  // Home Screen
   GetPage(
     name: '/',
     page: () => ResponsiveLayout(
@@ -33,7 +34,7 @@ final List<GetPage> appRoutes = [
       webScreenLayout: WebScreenLayout(child: const HomeScreen()),
     ),
   ),
-  // Create Community Screen wrapped in ResponsiveLayout
+  // Create Community Screen
   GetPage(
     name: '/create-community',
     page: () => ResponsiveLayout(
@@ -42,78 +43,86 @@ final List<GetPage> appRoutes = [
       webScreenLayout: WebScreenLayout(child: const CreateCommunityScreen()),
     ),
   ),
-  // Community Screen
+  // Community Screen (uses ID)
   GetPage(
-    name: '/X/:name',
+    name: '/X/:id',
     page: () {
-      final name = Get.parameters['name'];
-      // If the name parameter is missing, display an error screen.
-      if (name == null || name.isEmpty) {
+      final id = Get.parameters['id'];
+      if (id == null || id.isEmpty) {
         return const Scaffold(
-          body: Center(
-            child: Text("Invalid association name."),
-          ),
-        );
+            body: Center(child: Text("Invalid association ID.")));
       }
-      // Optionally extract a filter parameter if needed.
       final filter = Get.parameters['filter'] ?? '';
       return ResponsiveLayout(
         mobileScreenLayout: MobileScreenLayout(
-            child: CommunityScreen(name: name, filter: filter)),
-        webScreenLayout:
-            WebScreenLayout(child: CommunityScreen(name: name, filter: filter)),
+            child: CommunityScreen(
+                communityId: id, filter: filter) // Fixed parameter
+            ),
+        webScreenLayout: WebScreenLayout(
+            child: CommunityScreen(
+                communityId: id, filter: filter) // Fixed parameter
+            ),
       );
     },
   ),
   // Mod Tools Screen
   GetPage(
-    name: '/mod-tools/:name',
+    name: '/mod-tools/:id',
     page: () {
-      final name = Get.parameters['name'];
-      if (name == null || name.isEmpty) {
+      final id = Get.parameters['id'];
+      if (id == null || id.isEmpty) {
         return const Scaffold(
-          body: Center(child: Text("Invalid association name.")),
-        );
+            body: Center(child: Text("Invalid association ID.")));
       }
-      return ResponsiveLayout(
-        mobileScreenLayout:
-            MobileScreenLayout(child: ModToolsScreen(name: name)),
-        webScreenLayout: WebScreenLayout(child: ModToolsScreen(name: name)),
+      final communityController = Get.find<CommunityController>();
+      return StreamBuilder(
+        stream: communityController.getCommunityById(id),
+        builder: (context, snapshot) {
+          if (snapshot.hasError)
+            return Center(child: Text('Error: ${snapshot.error}'));
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
+          return ResponsiveLayout(
+            mobileScreenLayout: MobileScreenLayout(
+                child: ModToolsScreen(community: snapshot.data!)),
+            webScreenLayout: WebScreenLayout(
+                child: ModToolsScreen(community: snapshot.data!)),
+          );
+        },
       );
     },
   ),
   // Edit Community Screen
   GetPage(
-    name: '/edit-community/:name',
+    name: '/edit-community/:id',
     page: () {
-      final name = Get.parameters['name'];
-      if (name == null || name.isEmpty) {
+      final id = Get.parameters['id'];
+      if (id == null || id.isEmpty) {
         return const Scaffold(
-          body: Center(child: Text("Invalid community name.")),
-        );
+            body: Center(child: Text("Invalid community ID.")));
       }
       return ResponsiveLayout(
         mobileScreenLayout:
-            MobileScreenLayout(child: EditCommunityScreen(name: name)),
+            MobileScreenLayout(child: EditCommunityScreen(communityId: id)),
         webScreenLayout:
-            WebScreenLayout(child: EditCommunityScreen(name: name)),
+            WebScreenLayout(child: EditCommunityScreen(communityId: id)),
       );
     },
   ),
   // Add Moderators Screen
   GetPage(
-    name: '/add-mods/:name',
+    name: '/add-mods/:id',
     page: () {
-      final name = Get.parameters['name'];
-      if (name == null || name.isEmpty) {
+      final id = Get.parameters['id'];
+      if (id == null || id.isEmpty) {
         return const Scaffold(
-          body: Center(child: Text("Invalid community name.")),
-        );
+            body: Center(child: Text("Invalid community ID.")));
       }
       return ResponsiveLayout(
-        mobileScreenLayout:
-            MobileScreenLayout(child: AddModsScreen(name: name)),
-        webScreenLayout: WebScreenLayout(child: AddModsScreen(name: name)),
+        mobileScreenLayout: MobileScreenLayout(
+            child: AddModsScreen(communityId: id)), // Fixed parameter
+        webScreenLayout: WebScreenLayout(
+            child: AddModsScreen(communityId: id)), // Fixed parameter
       );
     },
   ),
@@ -123,9 +132,7 @@ final List<GetPage> appRoutes = [
     page: () {
       final uid = Get.parameters['uid'];
       if (uid == null || uid.isEmpty) {
-        return const Scaffold(
-          body: Center(child: Text("Invalid user id.")),
-        );
+        return const Scaffold(body: Center(child: Text("Invalid user id.")));
       }
       return ResponsiveLayout(
         mobileScreenLayout:
@@ -140,9 +147,7 @@ final List<GetPage> appRoutes = [
     page: () {
       final uid = Get.parameters['uid'];
       if (uid == null || uid.isEmpty) {
-        return const Scaffold(
-          body: Center(child: Text("Invalid user id.")),
-        );
+        return const Scaffold(body: Center(child: Text("Invalid user id.")));
       }
       return ResponsiveLayout(
         mobileScreenLayout:
