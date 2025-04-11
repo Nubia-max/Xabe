@@ -81,7 +81,7 @@ class CommunityBox extends StatelessWidget {
               padding: const EdgeInsets.all(1),
               decoration: BoxDecoration(
                 color: boxColor,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(18),
               ),
               child: Stack(
                 children: [
@@ -117,7 +117,7 @@ class CommunityBox extends StatelessWidget {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.grey,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(18),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,

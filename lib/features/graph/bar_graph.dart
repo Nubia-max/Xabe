@@ -36,83 +36,96 @@ class MyHorizontalBarGraph extends StatelessWidget {
             nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Name container: first name on top and second name below.
-              Container(
-                width: nameWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      firstName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white
-                            : Colors.black,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (secondName.isNotEmpty)
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Fixed width for name column
+                SizedBox(
+                  width: nameWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        secondName,
+                        firstName,
                         style: TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                           color: Theme.of(context).brightness == Brightness.dark
                               ? Colors.white
                               : Colors.black,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Bar with vote count overlaid at its right end.
-              Stack(
-                children: [
-                  Container(
-                    height: 20,
-                    width: barWidth,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.blue.shade700,
-                          Colors.cyan,
-                          Colors.cyanAccent,
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
-                  ),
-                  // Vote count positioned at the right end of the bar.
-                  Positioned(
-                    right: 4,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: Text(
-                        vote.toInt().toString(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Colors.black45,
+                      if (secondName.isNotEmpty)
+                        Text(
+                          secondName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.normal,
+                            fontSize: 12,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
-        );
+                ),
+                const SizedBox(width: 8),
+
+                // Bar section expands to available space
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final barMaxWidth = constraints.maxWidth;
+
+                      // Calculate bar width proportionally
+                      double vote = votesSummary[index];
+                      double barWidth =
+                          maxVote > 0 ? (vote / maxVote) * barMaxWidth : 0;
+
+                      return Stack(
+                        children: [
+                          Container(
+                            height: 20,
+                            width: barWidth,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.blue.shade700,
+                                  Colors.cyan,
+                                  Colors.cyanAccent,
+                                ],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 4,
+                            top: 0,
+                            bottom: 0,
+                            child: Center(
+                              child: Text(
+                                vote.toInt().toString(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Colors.black45,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ));
       }),
     );
   }

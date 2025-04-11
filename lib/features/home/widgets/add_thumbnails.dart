@@ -162,7 +162,7 @@ class _AddThumbnailsPageState extends State<AddThumbnailsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Thumbnails for $communityName'),
+        title: Text('Edit Thumbnails'),
       ),
       body: Stack(
         children: [
@@ -270,7 +270,7 @@ class _AddThumbnailsPageState extends State<AddThumbnailsPage> {
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _saveThumbnails,
-                  child: const Text('Save Thumbnails'),
+                  child: const Text('Save'),
                 ),
               ],
             ),

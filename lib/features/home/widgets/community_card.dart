@@ -80,7 +80,6 @@ class CommunityCard extends StatelessWidget {
                               value: 'campaign',
                               child: Row(
                                 children: const [
-                                  Icon(Icons.camera_alt, color: Colors.black),
                                   SizedBox(width: 8),
                                   Text('Campaign here'),
                                 ],
@@ -91,8 +90,6 @@ class CommunityCard extends StatelessWidget {
                                 value: 'elections',
                                 child: Row(
                                   children: const [
-                                    Icon(Icons.how_to_vote,
-                                        color: Colors.black),
                                     SizedBox(width: 8),
                                     Text('Conduct elections'),
                                   ],
@@ -162,24 +159,34 @@ class CommunityCard extends StatelessWidget {
             // Row of boxes below header.
             Row(
               children: [
-                // Box 1: Campaign (carousel2).
-                CommunityBox(
-                  community: community,
-                  postType: 'carousel2',
-                  addButtonText: 'Campaigns',
-                  emptyMessage: 'No campaign found.',
-                  onBoxTap: () => navigateToCommunityWithFilter('carousel2'),
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: 190 / 300, // maintains consistent shape
+                    child: CommunityBox(
+                      community: community,
+                      postType: 'carousel2',
+                      addButtonText: 'Campaigns',
+                      emptyMessage: 'No campaign found.',
+                      onBoxTap: () =>
+                          navigateToCommunityWithFilter('carousel2'),
+                    ),
+                  ),
                 ),
-                // Box 2: Live Election (carousel).
-                CommunityBox(
-                  community: community,
-                  postType: 'carousel',
-                  addButtonText: 'Elections',
-                  emptyMessage: 'No live election.',
-                  onBoxTap: () => navigateToCommunityWithFilter('carousel'),
+                const SizedBox(width: 8), // spacing between boxes
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: 190 / 300,
+                    child: CommunityBox(
+                      community: community,
+                      postType: 'carousel',
+                      addButtonText: 'Elections',
+                      emptyMessage: 'No live election.',
+                      onBoxTap: () => navigateToCommunityWithFilter('carousel'),
+                    ),
+                  ),
                 ),
               ],
-            ),
+            )
           ],
         ),
       ),

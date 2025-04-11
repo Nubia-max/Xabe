@@ -58,9 +58,11 @@ class NotificationController extends GetxController {
   Future<void> sendNotification({
     required String recipientId,
     required String senderId,
+    required String senderName,
     required String message,
     required String type,
     required String communityId,
+    required String communityName,
     String? verificationImageUrl,
   }) async {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
@@ -68,10 +70,12 @@ class NotificationController extends GetxController {
       id: id,
       recipientId: recipientId,
       senderId: senderId,
+      senderName: senderName,
       message: message,
       timestamp: DateTime.now(),
       type: type,
       communityId: communityId,
+      communityName: communityName,
       isProcessed: false,
       verificationImageUrl: verificationImageUrl,
     );

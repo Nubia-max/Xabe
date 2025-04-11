@@ -102,9 +102,11 @@ class CommunityController extends GetxController {
               Get.find<NotificationController>().sendNotification(
                 recipientId: modUid,
                 senderId: user.uid,
+                senderName: user.name,
                 message: "${user.name} wants to join ${community.name}",
                 type: "join_request",
                 communityId: community.id,
+                communityName: community.name,
                 verificationImageUrl: verificationImageUrl,
               );
             }
@@ -166,9 +168,11 @@ class CommunityController extends GetxController {
           Get.find<NotificationController>().sendNotification(
             recipientId: modUid,
             senderId: user.uid,
+            senderName: user.name,
             message: "${user.name} wants to join ${community.name}",
             type: "join_request",
             communityId: community.id,
+            communityName: community.name,
           );
         }
         showSnackBar(context, 'Join request sent. Awaiting approval.');
@@ -188,9 +192,11 @@ class CommunityController extends GetxController {
         Get.find<NotificationController>().sendNotification(
           recipientId: userId,
           senderId: AuthController.to.userModel.value?.uid ?? 'moderator',
+          senderName: 'Moderator',
           message: "Join request accepted",
           type: "join_accepted",
-          communityId: communityId, // Use communityId here
+          communityId: communityId,
+          communityName: '', // Use communityId here
         );
       },
     );
@@ -298,6 +304,7 @@ class CommunityController extends GetxController {
 
   /// Get posts for a community.
   Stream<List<Post>> getCommunityPosts(String communityId) {
+    print('[DEBUG] Fetching posts for communityId: $communityId'); // ✅ Add this
     return communityRepository.getCommunityPosts(communityId);
   }
 

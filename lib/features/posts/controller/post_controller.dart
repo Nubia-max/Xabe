@@ -181,9 +181,11 @@ class PostController extends GetxController {
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
+              senderName: user.name,
               message: "New post in ${selectedCommunity.id}: $title",
               type: "new_post",
               communityId: selectedCommunity.id,
+              communityName: selectedCommunity.name,
             );
           }
         }
@@ -219,7 +221,8 @@ class PostController extends GetxController {
       userVotes: {},
       imageVotes: {},
       taggedUsers: [],
-      electionEndTime: DateTime.now(), communityId: '', // Adjust as needed.
+      electionEndTime: DateTime.now(),
+      communityId: selectedCommunity.id, // Adjust as needed.
     );
 
     final res = await _postRepository.addPost(post);
@@ -234,9 +237,11 @@ class PostController extends GetxController {
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
+              senderName: user.name,
               message: "New post in ${selectedCommunity.id}: $title",
               type: "new_post",
               communityId: selectedCommunity.id,
+              communityName: selectedCommunity.name,
             );
           }
         }
@@ -386,9 +391,11 @@ class PostController extends GetxController {
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
+              senderName: user.name,
               message: "New post in ${selectedCommunity.id}: $title",
               type: "new_post",
               communityId: selectedCommunity.id,
+              communityName: selectedCommunity.name,
             );
           }
         }
@@ -438,7 +445,8 @@ class PostController extends GetxController {
         userVotes: {},
         imageVotes: {},
         taggedUsers: [],
-        electionEndTime: DateTime.now(), communityId: '', // Adjust as needed.
+        electionEndTime: DateTime.now(),
+        communityId: selectedCommunity.id, // Adjust as needed.
       );
       final res = await _postRepository.addPost(post);
       setLoading(false);
@@ -452,9 +460,11 @@ class PostController extends GetxController {
               Get.find<NotificationController>().sendNotification(
                 recipientId: member,
                 senderId: user.uid,
+                senderName: user.name,
                 message: "New post in ${selectedCommunity.id}: $title",
                 type: "new_post",
                 communityId: selectedCommunity.id,
+                communityName: selectedCommunity.name,
               );
             }
           }

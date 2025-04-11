@@ -59,12 +59,16 @@ class UserProfileScreen extends StatelessWidget {
                         children: [
                           Container(
                             alignment: Alignment.bottomLeft,
-                            padding:
-                                const EdgeInsets.all(20).copyWith(bottom: 70),
+                            padding: currentUser.uid == uid
+                                ? const EdgeInsets.all(20).copyWith(
+                                    bottom: 70) // Leave space for edit button
+                                : const EdgeInsets.all(
+                                    20), // No extra bottom space
                             child: kIsWeb
                                 ? CachedWebImage(
                                     imageUrl: user.profilePic,
-                                    fit: BoxFit.cover)
+                                    fit: BoxFit.cover,
+                                  )
                                 : CircleAvatar(
                                     backgroundImage:
                                         getImageProvider(user.profilePic),

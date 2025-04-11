@@ -38,82 +38,89 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           itemBuilder: (context, index) {
             final notification = notificationController.notifications[index];
             final isJoinRequest = notification.type == 'join_request';
-            return ListTile(
-              title: Text(notification.message),
-              subtitle: notification.type == 'new_post'
-                  ? Text("New post in association ${notification.communityId}")
-                  : notification.type == 'join_accepted'
-                      ? Text(
-                          "Your request to join ${notification.communityId} association was accepted.")
-                      : isJoinRequest
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Community: ${notification.communityId}'),
-                                if (notification.verificationImageUrl != null &&
-                                    notification
-                                        .verificationImageUrl!.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        // Navigate to full screen image view.
-                                        Get.to(() => FullScreenImageScreen(
-                                            imageUrl: notification
-                                                .verificationImageUrl!));
-                                      },
-                                      child: CachedNetworkImage(
-                                        imageUrl:
-                                            notification.verificationImageUrl!,
-                                        height: 100,
-                                        width: 100,
-                                        fit: BoxFit.cover,
-                                        placeholder: (context, url) =>
-                                            const CircularProgressIndicator(),
-                                        errorWidget: (context, url, error) =>
-                                            const Icon(Icons.error),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            )
-                          : null,
-              trailing: isJoinRequest && !notification.isProcessed
-                  ? SizedBox(
-                      width: 100,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.check, color: Colors.green),
-                            onPressed: () async {
-                              await Get.find<CommunityController>()
-                                  .acceptJoinRequest(
-                                notification.communityId,
-                                notification.senderId,
-                                context,
-                              );
-                              await notificationController
-                                  .markNotificationAsProcessed(notification.id);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.red),
-                            onPressed: () async {
-                              await Get.find<CommunityController>()
-                                  .declineJoinRequest(
-                                notification.communityId,
-                                notification.senderId,
-                                context,
-                              );
-                              await notificationController
-                                  .markNotificationAsProcessed(notification.id);
-                            },
-                          ),
-                        ],
-                      ),
-                    )
+            return GestureDetector(
+              onTap: notification.verificationImageUrl != null &&
+                      notification.verificationImageUrl!.isNotEmpty
+                  ? () {
+                      Get.to(() => FullScreenImageScreen(
+                          imageUrl: notification.verificationImageUrl!));
+                    }
                   : null,
+              child: ListTile(
+                title: Text(notification.message),
+                subtitle: isJoinRequest
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                                'Join request from ${notification.senderName}'),
+                          ),
+                          if (notification.verificationImageUrl != null &&
+                              notification.verificationImageUrl!.isNotEmpty)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: CachedNetworkImage(
+                                imageUrl: notification.verificationImageUrl!,
+                                height: 40,
+                                width: 40,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) =>
+                                    const CircularProgressIndicator(
+                                        strokeWidth: 1.5),
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error, size: 16),
+                              ),
+                            ),
+                        ],
+                      )
+                    : notification.type == 'new_post'
+                        ? Text(
+                            "New post in association ${notification.communityName}")
+                        : notification.type == 'join_accepted'
+                            ? Text(
+                                "Your request to join ${notification.communityName} association was accepted.")
+                            : null,
+                trailing: isJoinRequest && !notification.isProcessed
+                    ? SizedBox(
+                        width: 100,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.check, color: Colors.green),
+                              onPressed: () async {
+                                await Get.find<CommunityController>()
+                                    .acceptJoinRequest(
+                                  notification.communityId,
+                                  notification.senderId,
+                                  context,
+                                );
+                                await notificationController
+                                    .markNotificationAsProcessed(
+                                        notification.id);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.red),
+                              onPressed: () async {
+                                await Get.find<CommunityController>()
+                                    .declineJoinRequest(
+                                  notification.communityId,
+                                  notification.senderId,
+                                  context,
+                                );
+                                await notificationController
+                                    .markNotificationAsProcessed(
+                                        notification.id);
+                              },
+                            ),
+                          ],
+                        ),
+                      )
+                    : null,
+              ),
             );
           },
         );
