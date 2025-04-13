@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -27,18 +29,12 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
   final linkController = TextEditingController();
   File? bannerFile;
   Uint8List? bannerBytes;
-  // For mobile, we keep files; for web we store a list of Uint8List.
   List<dynamic> carouselImages = [];
-
-  // Each carousel image must have at least one tagged user.
-  // This list stores, per image, a list of user IDs.
   List<List<String>> taggedUsers = [];
   Map<String, String> taggedUsernames = {};
   List<Community> communities = [];
   Community? selectedCommunity;
-  List<bool> _showTagsForImages = [];
 
-  // Election end time for carousel posts.
   DateTime? electionEndTime;
 
   @override
@@ -50,7 +46,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
     super.dispose();
   }
 
-  // Function to tag users for an image.
   void tagUsers(int imageIndex) async {
     if (selectedCommunity == null) {
       showSnackBar(context, "Please select association first");
@@ -62,9 +57,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       builder: (context) {
         String searchQuery = "";
         return StreamBuilder<List<Map<String, String>>>(
-          // Use fetchCommunityUsers instead of getCommunityUsers
           stream: Get.find<CommunityController>()
-              .fetchCommunityUsers(selectedCommunity!.id), // Correct method
+              .fetchCommunityUsers(selectedCommunity!.id),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return AlertDialog(
@@ -147,7 +141,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
     if (selectedUsers != null) {
       setState(() {
-        // Ensure there is a slot for the current image.
         while (taggedUsers.length <= imageIndex) {
           taggedUsers.add([]);
         }
@@ -169,12 +162,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
     final res = await pickImage();
     if (res != null) {
       if (kIsWeb) {
-        if (!mounted) return;
         setState(() {
           bannerBytes = res.files.first.bytes;
         });
       } else {
-        if (!mounted) return;
         setState(() {
           bannerFile = File(res.files.first.path!);
         });
@@ -188,13 +179,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       allowMultiple: true,
     );
     if (res != null) {
-      // Temporary list to hold the picked images.
       List<dynamic> images = [];
       for (var file in res.files) {
         if (kIsWeb) {
           if (file.bytes != null) {
-            // Create a new copy of the bytes and assign a unique id.
-            // We package each image as a map containing the bytes and a unique identifier.
             final uniqueId = DateTime.now().millisecondsSinceEpoch.toString() +
                 "_" +
                 file.name;
@@ -212,7 +200,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       }
       setState(() {
         carouselImages = images;
-        _showTagsForImages = List.filled(carouselImages.length, false);
       });
     }
   }
@@ -281,8 +268,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         showSnackBar(context, "Please tag all the pictures before posting.");
         return;
       }
-      // For web, we now pass the list of maps with unique ids.
-      // For mobile, carouselImages is already a list of File objects.
       postController.shareCarouselPost(
         context: context,
         title: titleController.text.trim(),
@@ -319,7 +304,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
     final postController = Get.find<PostController>();
 
     Widget buildMediaPreview(dynamic fileData) {
-      // On web, fileData is a Map; on mobile, it's a File.
       if (kIsWeb) {
         return Image.memory(
           fileData["bytes"],
@@ -398,17 +382,14 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                       selectedCommunity = routeCommunity != null
                           ? data.firstWhere(
                               (comm) => comm.name == routeCommunity,
-                              orElse: () => data[0],
-                            )
+                              orElse: () => data[0])
                           : data[0];
                     }
                     return DropdownButton<Community>(
                       value: selectedCommunity ?? data[0],
                       items: data
                           .map((e) => DropdownMenuItem<Community>(
-                                value: e,
-                                child: Text(e.name),
-                              ))
+                              value: e, child: Text(e.name)))
                           .toList(),
                       onChanged: (val) {
                         if (!mounted) return;

@@ -19,7 +19,7 @@ class CommunityCard extends StatelessWidget {
 
   /// Navigate to the add-post screen for a given post type.
   void navigateToType(String type) {
-    Get.toNamed('/add-post/$type', parameters: {'community': community.id});
+    Get.toNamed('/add-post/$type', parameters: {'community': community.name});
   }
 
   /// Helper to format a Duration into a short string like "2h 10m"

@@ -52,36 +52,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Build a mini search bar widget.
+  // Build a mini search bar widget that adapts its text based on available width.
   Widget buildMiniSearchBar() {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          showSearch(context: context, delegate: SearchCommunityDelegate());
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey.shade800
-                : Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.search, color: Colors.grey, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Search association',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Determine overall screen width using MediaQuery
+        double screenWidth = MediaQuery.of(context).size.width;
+        // If the screen is too narrow, show a shorter text.
+        bool showFullText = screenWidth > 400;
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () {
+              showSearch(context: context, delegate: SearchCommunityDelegate());
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.search, color: Colors.grey, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    showFullText ? 'Search association' : 'Search',
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -179,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        backgroundColor: currentTheme.appBarTheme.backgroundColor,
         title: buildTitleWithNotification(),
         centerTitle: false,
         leading: IconButton(
@@ -187,6 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: displayDrawer,
         ),
         actions: [
+          // Always show the responsive mini search bar.
           buildMiniSearchBar(),
           IconButton(
             icon: CircleAvatar(

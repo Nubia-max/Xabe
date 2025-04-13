@@ -21,26 +21,27 @@ class MyHorizontalBarGraph extends StatelessWidget {
     // Define the fixed width for the name container.
     const double nameWidth = 80.0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: List.generate(votesSummary.length, (index) {
-        double vote = votesSummary[index];
-        // Calculate proportional width for the bar.
-        double barWidth = maxVote > 0 ? (vote / maxVote) * maxBarWidth : 0;
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(votesSummary.length, (index) {
+          double vote = votesSummary[index];
+          // Calculate proportional width for the bar.
+          double barWidth = maxVote > 0 ? (vote / maxVote) * maxBarWidth : 0;
 
-        // Split the tagged user's name into two parts if possible.
-        List<String> nameParts = taggedUsers[index].split(' ');
-        String firstName =
-            nameParts.isNotEmpty ? nameParts.first : taggedUsers[index];
-        String secondName =
-            nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+          // Split the tagged user's name into two parts if possible.
+          List<String> nameParts = taggedUsers[index].split(' ');
+          String firstName =
+              nameParts.isNotEmpty ? nameParts.first : taggedUsers[index];
+          String secondName =
+              nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-        return Padding(
+          return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Fixed width for name column
+                // Fixed width for name column.
                 SizedBox(
                   width: nameWidth,
                   child: Column(
@@ -74,14 +75,12 @@ class MyHorizontalBarGraph extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Bar section expands to available space
+                // Bar section expands to available space.
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final barMaxWidth = constraints.maxWidth;
-
-                      // Calculate bar width proportionally
+                      // Calculate bar width proportionally.
                       double vote = votesSummary[index];
                       double barWidth =
                           maxVote > 0 ? (vote / maxVote) * barMaxWidth : 0;
@@ -111,10 +110,13 @@ class MyHorizontalBarGraph extends StatelessWidget {
                             child: Center(
                               child: Text(
                                 vote.toInt().toString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
-                                  color: Colors.black45,
+                                  // Color for highest vote is purple (adjust if needed).
+                                  color: vote == maxVote
+                                      ? Colors.purple
+                                      : Colors.grey,
                                 ),
                               ),
                             ),
@@ -125,8 +127,10 @@ class MyHorizontalBarGraph extends StatelessWidget {
                   ),
                 ),
               ],
-            ));
-      }),
+            ),
+          );
+        }),
+      ),
     );
   }
 }
