@@ -10,6 +10,7 @@ import 'package:xabe/features/auth/repository/auth_repository.dart';
 import 'package:xabe/features/community/controller/community_controller.dart';
 import 'package:xabe/features/community/repository/community_repository.dart';
 import 'package:xabe/core/providers/storage_repository.dart';
+import 'package:xabe/features/notifications/noti_service.dart';
 import 'package:xabe/features/posts/controller/post_controller.dart';
 import 'package:xabe/features/posts/repository/post_repository.dart';
 import 'package:xabe/theme/pallete.dart';
@@ -24,6 +25,9 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  NotiService().initNotification();
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Create your Firebase instances.

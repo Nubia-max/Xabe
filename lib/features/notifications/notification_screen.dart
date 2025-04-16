@@ -53,8 +53,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                                'Join request from ${notification.senderName}'),
+                            child: Text('Click to view image'),
                           ),
                           if (notification.verificationImageUrl != null &&
                               notification.verificationImageUrl!.isNotEmpty)
@@ -75,11 +74,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ],
                       )
                     : notification.type == 'new_post'
-                        ? Text(
-                            "New post in association ${notification.communityName}")
+                        ? Text("New post in ${notification.communityName}")
                         : notification.type == 'join_accepted'
                             ? Text(
-                                "Your request to join ${notification.communityName} association was accepted.")
+                                "Your request to join ${notification.communityName ?? 'the community'} was accepted.")
                             : null,
                 trailing: isJoinRequest && !notification.isProcessed
                     ? SizedBox(

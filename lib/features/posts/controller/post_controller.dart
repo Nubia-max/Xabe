@@ -137,118 +137,6 @@ class PostController extends GetxController {
     }
   }
 
-  /// Shares a text post.
-  Future<void> shareTextPost({
-    required BuildContext context,
-    required String title,
-    required Community selectedCommunity,
-    required String description,
-  }) async {
-    setLoading(true);
-    String postId = const Uuid().v1();
-    final user = Get.find<AuthController>().userModel.value!;
-    final Post post = Post(
-      id: postId,
-      title: title,
-      communityName: selectedCommunity.id,
-      communityProfilePic: selectedCommunity.avatar,
-      commentCount: 0,
-      username: user.name,
-      uid: user.uid,
-      type:
-          'text', // Make sure the type is correctly assigned (image, text, link, etc.)
-      createdAt: DateTime.now(),
-      description: description,
-      imageUrls: [],
-      likedBy: [],
-      userVotes: {},
-      imageVotes: {},
-      taggedUsers: [],
-      link: '',
-      electionEndTime: DateTime.now(),
-      communityId: selectedCommunity.id, // Ensure communityId is set correctly
-    );
-
-    final res = await _postRepository.addPost(post);
-    setLoading(false);
-    res.fold(
-      (l) => showSnackBar(context, l.message),
-      (_) {
-        showSnackBar(context, 'Posted Successfully!');
-        Get.back();
-        for (final member in selectedCommunity.members) {
-          if (member != user.uid) {
-            Get.find<NotificationController>().sendNotification(
-              recipientId: member,
-              senderId: user.uid,
-              senderName: user.name,
-              message: "New post in ${selectedCommunity.id}: $title",
-              type: "new_post",
-              communityId: selectedCommunity.id,
-              communityName: selectedCommunity.name,
-            );
-          }
-        }
-      },
-    );
-  }
-
-  /// Shares a link post.
-  Future<void> shareLinkPost({
-    required BuildContext context,
-    required String title,
-    required String caption,
-    required Community selectedCommunity,
-    required String link,
-  }) async {
-    setLoading(true);
-    String postId = const Uuid().v1();
-    final user = Get.find<AuthController>().userModel.value!;
-    final Post post = Post(
-      id: postId,
-      title: title,
-      communityName: selectedCommunity.id,
-      communityProfilePic: selectedCommunity.avatar,
-      commentCount: 0,
-      username: user.name,
-      uid: user.uid,
-      type: 'link',
-      createdAt: DateTime.now(),
-      link: link,
-      description: caption,
-      imageUrls: [],
-      likedBy: [],
-      userVotes: {},
-      imageVotes: {},
-      taggedUsers: [],
-      electionEndTime: DateTime.now(),
-      communityId: selectedCommunity.id, // Adjust as needed.
-    );
-
-    final res = await _postRepository.addPost(post);
-    setLoading(false);
-    res.fold(
-      (l) => showSnackBar(context, l.message),
-      (_) {
-        showSnackBar(context, 'Posted Successfully!');
-        Get.back();
-        for (final member in selectedCommunity.members) {
-          if (member != user.uid) {
-            Get.find<NotificationController>().sendNotification(
-              recipientId: member,
-              senderId: user.uid,
-              senderName: user.name,
-              message: "New post in ${selectedCommunity.id}: $title",
-              type: "new_post",
-              communityId: selectedCommunity.id,
-              communityName: selectedCommunity.name,
-            );
-          }
-        }
-      },
-    );
-  }
-
   /// Helper function to compress an image file (mobile only).
   Future<File?> compressImage(File file) async {
     if (kIsWeb) return file; // Skip compression on web.
@@ -381,6 +269,7 @@ class PostController extends GetxController {
       (_) => showSnackBar(context, "Post shared successfully!"),
     );
     isLoading.value = false;
+    // After successfully adding the post:
     res.fold(
       (l) => showSnackBar(context, l.message),
       (_) {
@@ -388,11 +277,15 @@ class PostController extends GetxController {
         Get.back();
         for (final member in selectedCommunity.members) {
           if (member != user.uid) {
+            // Choose the message format based on isCarousel2 value:
+            final String notificationMessage = isCarousel2
+                ? "Election campaigns in ${selectedCommunity.name}"
+                : "$title Elections have begun in ${selectedCommunity.name}";
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
               senderName: user.name,
-              message: "New post in ${selectedCommunity.id}: $title",
+              message: notificationMessage,
               type: "new_post",
               communityId: selectedCommunity.id,
               communityName: selectedCommunity.name,
@@ -461,7 +354,8 @@ class PostController extends GetxController {
                 recipientId: member,
                 senderId: user.uid,
                 senderName: user.name,
-                message: "New post in ${selectedCommunity.id}: $title",
+                message:
+                    "Election Campaigns have begun ${selectedCommunity.name}",
                 type: "new_post",
                 communityId: selectedCommunity.id,
                 communityName: selectedCommunity.name,

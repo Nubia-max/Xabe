@@ -236,25 +236,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         selectedCommunity: selectedCommunity ?? communities[0],
         file: bannerFile,
       );
-    } else if (widget.type == 'text' && titleController.text.isNotEmpty) {
-      postController.shareTextPost(
-        context: context,
-        title: titleController.text.trim(),
-        selectedCommunity: selectedCommunity ?? communities[0],
-        description: descriptionController.text.trim().isEmpty
-            ? captionText
-            : descriptionController.text.trim(),
-      );
-    } else if (widget.type == 'link' &&
-        linkController.text.isNotEmpty &&
-        titleController.text.isNotEmpty) {
-      postController.shareLinkPost(
-        context: context,
-        title: titleController.text.trim(),
-        selectedCommunity: selectedCommunity ?? communities[0],
-        link: linkController.text.trim(),
-        caption: captionText,
-      );
     } else if (widget.type == 'carousel' &&
         carouselImages.isNotEmpty &&
         titleController.text.isNotEmpty) {

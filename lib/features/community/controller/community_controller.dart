@@ -183,8 +183,11 @@ class CommunityController extends GetxController {
   /// When moderator accepts a join request, send a notification to the user.
   Future<void> acceptJoinRequest(
       String communityId, String userId, BuildContext context) async {
-    final res = await communityRepository.acceptJoinRequest(
-        communityId, userId); // Accept communityId
+    // Optionally, if you need the community object, fetch it using the communityId
+    final community =
+        await communityRepository.getCommunityById(communityId).first;
+    final res =
+        await communityRepository.acceptJoinRequest(communityId, userId);
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) {
@@ -196,7 +199,7 @@ class CommunityController extends GetxController {
           message: "Join request accepted",
           type: "join_accepted",
           communityId: communityId,
-          communityName: '', // Use communityId here
+          communityName: community.name, // Use fetched community name.
         );
       },
     );
@@ -298,7 +301,24 @@ class CommunityController extends GetxController {
     final res = await communityRepository.addMods(communityId, uids);
     res.fold(
       (failure) => showSnackBar(context, failure.message),
-      (_) => Get.back(),
+      (_) async {
+        // Retrieve the community details to get the community name.
+        final community =
+            await communityRepository.getCommunityById(communityId).first;
+        // Send a notification to each newly added moderator.
+        for (final uid in uids) {
+          Get.find<NotificationController>().sendNotification(
+            recipientId: uid,
+            senderId: AuthController.to.userModel.value?.uid ?? 'system',
+            senderName: 'System',
+            message: "You have been added as a moderator in ${community.name}",
+            type: "new_mod",
+            communityId: community.id,
+            communityName: community.name,
+          );
+        }
+        Get.back();
+      },
     );
   }
 

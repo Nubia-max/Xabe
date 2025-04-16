@@ -47,6 +47,7 @@ dependencies:
   google_nav_bar: ^5.0.7
   curved_navigation_bar: ^1.0.6
   flutter_image_compress: ^2.4.0
+  flutter_local_notifications: ^19.1.0
 
 dev_dependencies:
   flutter_test:
