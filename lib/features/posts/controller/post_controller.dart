@@ -280,7 +280,7 @@ class PostController extends GetxController {
             // Choose the message format based on isCarousel2 value:
             final String notificationMessage = isCarousel2
                 ? "Election campaigns in ${selectedCommunity.name}"
-                : "$title Elections have begun in ${selectedCommunity.name}";
+                : "$title elections have begun in ${selectedCommunity.name}";
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,

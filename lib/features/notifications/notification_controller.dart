@@ -3,12 +3,15 @@ import 'package:fpdart/fpdart.dart';
 import 'package:get/get.dart';
 import '../../core/failure.dart';
 import '../auth/controller/auth_controller.dart';
+import 'noti_service.dart';
 import 'notification_model.dart';
 import 'notification_repository.dart';
 
 class NotificationController extends GetxController {
   final NotificationRepository _notificationRepository;
+  final NotiService _notiService;
 
+  final Set<String> _shownNotificationIds = {};
   // Reactive list to hold notifications.
   var notifications = <NotificationModel>[].obs;
 
@@ -16,13 +19,16 @@ class NotificationController extends GetxController {
   var isLoading = false.obs;
   var hasNewNotifications = false.obs;
 
-  NotificationController(
-      {required NotificationRepository notificationRepository})
-      : _notificationRepository = notificationRepository;
+  NotificationController({
+    required NotificationRepository notificationRepository,
+    required NotiService notiService,
+  })  : _notificationRepository = notificationRepository,
+        _notiService = notiService;
 
   @override
   void onInit() {
     super.onInit();
+    _notiService.initNotification();
     final user = Get.find<AuthController>().userModel.value;
     if (user != null && user.isAuthenticated) {
       loadNotifications(user.uid);
@@ -31,13 +37,36 @@ class NotificationController extends GetxController {
 
   /// Call this method to start listening to notifications for a given user.
   void loadNotifications(String userId) {
-    _notificationRepository.getNotifications(userId).listen((notificationList) {
-      notifications.assignAll(notificationList.cast<NotificationModel>());
-      hasNewNotifications.value =
-          notifications.any((n) => n.isProcessed == false);
-    }, onError: (error) {
-      print("Error loading notifications: $error");
-    });
+    _notificationRepository.getNotifications(userId).listen(
+      (notificationList) {
+        final fresh = notificationList.cast<NotificationModel>();
+
+        // figure out which ones are newly arrived:
+        final newOnes =
+            fresh.where((n) => !_shownNotificationIds.contains(n.id)).toList();
+
+        // update your observable list
+        notifications.assignAll(fresh);
+
+        // mark new ones as shown locally
+        for (final n in newOnes) {
+          _shownNotificationIds.add(n.id);
+
+          // show a system notification for each
+          _notiService.showNotification(
+            id: n.id.hashCode & 0x7FFFFFFF,
+            title: n.senderName,
+            body: n.message,
+          );
+        }
+
+        // update your “has new” flag however you need
+        hasNewNotifications.value = notifications.any((n) => !n.isProcessed);
+      },
+      onError: (error) {
+        print("Error loading notifications: $error");
+      },
+    );
   }
 
   /// Mark a notification as processed.

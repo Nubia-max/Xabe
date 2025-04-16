@@ -51,7 +51,7 @@ class NotiService {
       id,
       title,
       body,
-      const NotificationDetails(),
+      notificationDetails(),
     );
   }
   // ON NOTI TAP

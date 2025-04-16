@@ -36,6 +36,10 @@ Future<void> main() async {
   final googleSignIn = GoogleSignIn();
   final firebaseStorage = FirebaseStorage.instance;
 
+  // 👇 register your service
+  final notiService = NotiService();
+  Get.put<NotiService>(notiService);
+
   // Register Firebase instances.
   Get.put<FirebaseFirestore>(firestore);
   Get.put<FirebaseStorage>(firebaseStorage);
@@ -77,7 +81,9 @@ Future<void> main() async {
   Get.put<NotificationRepository>(notificationRepository);
   Get.put<NotificationController>(NotificationController(
     notificationRepository: notificationRepository,
+    notiService: notiService, // ← don’t forget this!
   ));
+
   Get.put<CommunityController>(
     CommunityController(
       communityRepository: CommunityRepository(firestore: firestore),
