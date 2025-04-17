@@ -1,9 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xabe/core/constants/constants.dart';
 import 'package:xabe/features/home/delegates/search_community_delegate.dart';
 import 'package:xabe/features/home/drawers/community_list_drawer.dart';
 import 'package:xabe/features/home/drawers/profile_drawer.dart';

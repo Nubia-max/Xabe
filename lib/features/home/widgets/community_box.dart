@@ -4,7 +4,6 @@ import 'package:xabe/features/posts/controller/post_controller.dart';
 import 'package:xabe/models/community_model.dart';
 import 'package:xabe/models/post_model.dart';
 import '../../posts/widgets/neo_button.dart';
-import 'community_card.dart';
 
 class CommunityBox extends StatelessWidget {
   final Community community;
@@ -14,13 +13,13 @@ class CommunityBox extends StatelessWidget {
   final VoidCallback onBoxTap;
 
   const CommunityBox({
-    Key? key,
+    super.key,
     required this.community,
     required this.postType,
     required this.addButtonText,
     required this.emptyMessage,
     required this.onBoxTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -52,11 +51,9 @@ class CommunityBox extends StatelessWidget {
         // Check for a saved thumbnail. For instance, if postType is 'carousel2' use campaignThumbnailUrl.
         String imageUrl = '';
         if (postType == 'carousel2' &&
-            community.campaignThumbnailUrl != null &&
             community.campaignThumbnailUrl.isNotEmpty) {
           imageUrl = community.campaignThumbnailUrl;
         } else if (postType == 'carousel' &&
-            community.electionThumbnailUrl != null &&
             community.electionThumbnailUrl.isNotEmpty) {
           imageUrl = community.electionThumbnailUrl;
         } else if (hasPosts && posts.first.imageUrls.isNotEmpty) {

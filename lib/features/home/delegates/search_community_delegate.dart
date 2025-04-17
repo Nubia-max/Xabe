@@ -78,7 +78,7 @@ class SearchCommunityDelegate extends SearchDelegate {
   }
 
   void navigateToCommunity(String communityName) async {
-    await Get.toNamed('/X/${communityName}',
+    await Get.toNamed('/X/$communityName',
         parameters: {'filter': 'All Posts'});
   }
 

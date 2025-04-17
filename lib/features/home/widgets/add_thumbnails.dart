@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -12,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:xabe/models/community_model.dart'; // Ensure your Community model is imported
 
 class AddThumbnailsPage extends StatefulWidget {
-  const AddThumbnailsPage({Key? key}) : super(key: key);
+  const AddThumbnailsPage({super.key});
 
   @override
   _AddThumbnailsPageState createState() => _AddThumbnailsPageState();

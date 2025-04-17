@@ -6,11 +6,11 @@ class NeoButton extends StatefulWidget {
   final bool isVoted; // Control the "voted" state
 
   const NeoButton({
-    Key? key,
+    super.key,
     required this.onTap,
     this.text = "Vote",
     this.isVoted = false,
-  }) : super(key: key);
+  });
 
   @override
   _NeoButtonState createState() => _NeoButtonState();

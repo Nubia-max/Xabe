@@ -12,7 +12,7 @@ import '../controller/community_controller.dart';
 
 class AddModsScreen extends StatefulWidget {
   final String communityId;
-  const AddModsScreen({Key? key, required this.communityId}) : super(key: key);
+  const AddModsScreen({super.key, required this.communityId});
 
   @override
   _AddModsScreenState createState() => _AddModsScreenState();
@@ -91,8 +91,9 @@ class _AddModsScreenState extends State<AddModsScreen> {
               return StreamBuilder<UserModel>(
                 stream: authController.getUserData(memberUid),
                 builder: (ctx3, userSnap) {
-                  if (userSnap.hasError)
+                  if (userSnap.hasError) {
                     return ErrorText(error: userSnap.error.toString());
+                  }
                   if (!userSnap.hasData) return const Loader();
 
                   final user = userSnap.data!;

@@ -1,11 +1,9 @@
 // edit_profile_screen.dart
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xabe/core/constants/constants.dart';
 import 'package:xabe/core/utils.dart';
 
 import '../controller/user_profile_controller.dart';

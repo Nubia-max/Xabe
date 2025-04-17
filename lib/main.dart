@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 import 'package:xabe/features/auth/repository/auth_repository.dart';
@@ -20,31 +21,28 @@ import 'package:xabe/features/user_profile/repository/user_profile_repository.da
 import 'package:xabe/features/notifications/notification_controller.dart';
 import 'package:xabe/features/notifications/notification_repository.dart';
 import 'package:url_strategy/url_strategy.dart';
-import 'router.dart'; // Import your GetX routes file
+import 'router.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MobileAds.instance.initialize();
 
   NotiService().initNotification();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Create your Firebase instances.
   final firestore = FirebaseFirestore.instance;
   final firebaseAuth = FirebaseAuth.instance;
   final googleSignIn = GoogleSignIn();
   final firebaseStorage = FirebaseStorage.instance;
 
-  // 👇 register your service
   final notiService = NotiService();
   Get.put<NotiService>(notiService);
 
-  // Register Firebase instances.
   Get.put<FirebaseFirestore>(firestore);
   Get.put<FirebaseStorage>(firebaseStorage);
 
-  // Register Auth dependencies.
   Get.put<AuthRepository>(AuthRepository(
     firestore: firestore,
     auth: firebaseAuth,
@@ -53,7 +51,6 @@ Future<void> main() async {
   Get.put<AuthController>(
       AuthController(authRepository: Get.find<AuthRepository>()));
 
-  // Register Community dependencies.
   final communityRepository = CommunityRepository(firestore: firestore);
   final storageRepository = StorageRepository(firebaseStorage: firebaseStorage);
   Get.put<CommunityController>(CommunityController(
@@ -61,14 +58,12 @@ Future<void> main() async {
     storageRepository: storageRepository,
   ));
 
-  // Register UserProfile dependencies.
   final userProfileRepository = UserProfileRepository(firestore: firestore);
   Get.put<UserProfileController>(UserProfileController(
     storageRepository: storageRepository,
     userProfileRepository: userProfileRepository,
   ));
 
-  // Register Post dependencies.
   final postRepository = PostRepository(firestore: firestore);
   Get.put<PostRepository>(postRepository);
   Get.put<PostController>(PostController(
@@ -76,22 +71,20 @@ Future<void> main() async {
     storageRepository: storageRepository,
   ));
 
-  // Register Notification dependencies.
   final notificationRepository = NotificationRepository(firestore: firestore);
   Get.put<NotificationRepository>(notificationRepository);
   Get.put<NotificationController>(NotificationController(
     notificationRepository: notificationRepository,
-    notiService: notiService, // ← don’t forget this!
+    notiService: notiService,
   ));
 
   Get.put<CommunityController>(
     CommunityController(
       communityRepository: CommunityRepository(firestore: firestore),
-      storageRepository: storageRepository, // Pass the storage repository
+      storageRepository: storageRepository,
     ),
   );
 
-  // Register ThemeController (or other controllers).
   Get.put<ThemeController>(ThemeController());
 
   setPathUrlStrategy();
@@ -99,11 +92,43 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late BannerAd _bannerAd;
+  bool _isAdLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannerAd = BannerAd(
+      size: AdSize.banner,
+      adUnitId: 'ca-app-pub-3940256099942544/9214589741',
+      listener: BannerAdListener(
+        onAdLoaded: (_) => setState(() => _isAdLoaded = true),
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+          debugPrint('Ad failed to load: $err');
+        },
+      ),
+      request: const AdRequest(),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final ThemeController themeController = Get.find<ThemeController>();
+    final themeController = Get.find<ThemeController>();
+
     return Obx(() {
       return GetMaterialApp(
         debugShowCheckedModeBanner: false,
@@ -113,6 +138,18 @@ class MyApp extends StatelessWidget {
         themeMode: themeController.mode.value,
         initialRoute: '/login',
         getPages: appRoutes,
+        builder: (context, child) {
+          return Scaffold(
+            body: child,
+            bottomNavigationBar: _isAdLoaded
+                ? SizedBox(
+                    height: _bannerAd.size.height.toDouble(),
+                    width: _bannerAd.size.width.toDouble(),
+                    child: AdWidget(ad: _bannerAd),
+                  )
+                : null,
+          );
+        },
       );
     });
   }

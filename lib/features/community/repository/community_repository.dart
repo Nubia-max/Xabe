@@ -138,7 +138,7 @@ class CommunityRepository {
     final lowerQuery = query.toLowerCase();
     return _communities
         .where('nameLower', isGreaterThanOrEqualTo: lowerQuery)
-        .where('nameLower', isLessThanOrEqualTo: lowerQuery + '\uf8ff')
+        .where('nameLower', isLessThanOrEqualTo: '$lowerQuery\uf8ff')
         .snapshots()
         .map((event) => event.docs
             .map((doc) => Community.fromMap(doc.data() as Map<String, dynamic>))

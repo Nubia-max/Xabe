@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'pallete.dart';
 
 class ThemeController extends GetxController {
   final Rx<ThemeMode> mode = ThemeMode.system.obs;

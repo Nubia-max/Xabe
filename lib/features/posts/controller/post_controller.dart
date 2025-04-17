@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -206,7 +205,7 @@ class PostController extends GetxController {
           continue;
         }
         // Generate a unique id for this image.
-        String uniqueId = '$postId\_$i';
+        String uniqueId = '${postId}_$i';
         uploadFutures.add(_storageRepository.storeFileFromBytes(
           path: 'posts/${selectedCommunity.id}',
           id: uniqueId,
@@ -215,7 +214,7 @@ class PostController extends GetxController {
         ));
       } else {
         // For mobile:
-        String uniqueId = '$postId\_$i';
+        String uniqueId = '${postId}_$i';
         File fileToUpload;
         if (files[i] is File) {
           fileToUpload = files[i];

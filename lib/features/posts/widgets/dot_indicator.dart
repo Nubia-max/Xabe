@@ -6,11 +6,11 @@ class DotIndicator extends StatelessWidget {
   final int totalDots;
 
   const DotIndicator({
-    Key? key,
+    super.key,
     required this.index,
     required this.currentPage,
     required this.totalDots,
-  }) : super(key: key);
+  });
 
   // Calculate the scale based on the distance from the active dot.
   double _calculateScale() {

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
@@ -183,9 +182,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       for (var file in res.files) {
         if (kIsWeb) {
           if (file.bytes != null) {
-            final uniqueId = DateTime.now().millisecondsSinceEpoch.toString() +
-                "_" +
-                file.name;
+            final uniqueId = "${DateTime.now().millisecondsSinceEpoch}_${file.name}";
             images.add({
               "id": uniqueId,
               "bytes": Uint8List.fromList(file.bytes!),

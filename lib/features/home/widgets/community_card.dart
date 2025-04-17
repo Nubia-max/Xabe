@@ -9,7 +9,7 @@ import 'package:xabe/models/post_model.dart';
 class CommunityCard extends StatelessWidget {
   final Community community;
 
-  const CommunityCard({Key? key, required this.community}) : super(key: key);
+  const CommunityCard({super.key, required this.community});
 
   /// Navigate to the community screen with a filter parameter.
   void navigateToCommunityWithFilter(String filter) {
@@ -46,7 +46,7 @@ class CommunityCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header section with fixed height.
-            Container(
+            SizedBox(
               height: 40, // Fixed header height to avoid increasing card height
               child: Stack(
                 children: [
@@ -133,8 +133,9 @@ class CommunityCard extends StatelessWidget {
                                 post.electionEndTime != null &&
                                 post.electionEndTime!.isAfter(now))
                             .toList();
-                        if (electionPosts.isEmpty)
+                        if (electionPosts.isEmpty) {
                           return const SizedBox.shrink();
+                        }
                         // Sort posts by end time ascending.
                         electionPosts.sort((a, b) =>
                             a.electionEndTime!.compareTo(b.electionEndTime!));

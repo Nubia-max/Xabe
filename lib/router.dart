@@ -78,10 +78,12 @@ final List<GetPage> appRoutes = [
       return StreamBuilder(
         stream: communityController.getCommunityById(id),
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
-          if (!snapshot.hasData)
+          }
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           return ResponsiveLayout(
             mobileScreenLayout: MobileScreenLayout(
                 child: ModToolsScreen(community: snapshot.data!)),

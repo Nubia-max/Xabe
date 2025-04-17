@@ -71,5 +71,14 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
     <string>Explain why your app uses photo library</string>
+    <key>GADApplicationIdentifier</key>
+    <string>ca-app-pub-8352296755977335~6184022554</string>
+    <key>SKAdNetworkAppID</key>
+      <array>
+        <dict>
+          <key>SKADNetworkIdentifier</key>
+          <string>cstr6suwn9.skadnetwork</string>
+        </dict>
+      </array>
 </dict>
 </plist>
