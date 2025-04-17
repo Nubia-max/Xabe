@@ -1,104 +1,115 @@
 // screens/add_mods_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:xabe/core/common/error_text.dart';
 import 'package:xabe/core/common/loader.dart';
 import 'package:xabe/models/community_model.dart';
 
+import '../../../models/user_model.dart';
 import '../../auth/controller/auth_controller.dart';
 import '../controller/community_controller.dart';
 
 class AddModsScreen extends StatefulWidget {
   final String communityId;
-  const AddModsScreen({super.key, required this.communityId});
+  const AddModsScreen({Key? key, required this.communityId}) : super(key: key);
 
   @override
   _AddModsScreenState createState() => _AddModsScreenState();
 }
 
 class _AddModsScreenState extends State<AddModsScreen> {
-  Set<String> uids = {};
-  int ctr = 0;
+  final communityController = Get.find<CommunityController>();
+  final authController = Get.find<AuthController>();
 
-  void addUid(String uid) {
-    setState(() {
-      uids.add(uid);
+  String? currentUid;
+  String? creatorUid;
+  Set<String> selectedMods = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Grab current user UID however you store it:
+    currentUid = FirebaseAuth.instance.currentUser?.uid;
+
+    // Seed creator & existing mods once:
+    communityController
+        .getCommunityById(widget.communityId)
+        .first
+        .then((community) {
+      setState(() {
+        creatorUid = community.creatorUid;
+        selectedMods = Set.from(community.mods);
+      });
     });
   }
 
-  void removeUid(String uid) {
-    setState(() {
-      uids.remove(uid);
-    });
+  bool get isCreator => currentUid == creatorUid;
+
+  void _onCheckboxChanged(String uid, bool? checked) {
+    if (uid == creatorUid) return; // never remove creator
+    if (checked == true) {
+      selectedMods.add(uid);
+    } else {
+      selectedMods.remove(uid);
+    }
+    setState(() {});
   }
 
-  void saveMods() {
-    Get.find<CommunityController>()
-        .addMods(widget.communityId, uids.toList(), context);
+  void _saveMods() {
+    communityController.addMods(
+      widget.communityId,
+      selectedMods.toList(),
+      context,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final communityController = Get.find<CommunityController>();
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Manage Admin'),
         actions: [
-          IconButton(
-            onPressed: saveMods,
-            icon: const Icon(Icons.done),
-          ),
+          if (isCreator)
+            IconButton(icon: const Icon(Icons.check), onPressed: _saveMods),
         ],
       ),
       body: StreamBuilder<Community>(
         stream: communityController.getCommunityById(widget.communityId),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return ErrorText(error: snapshot.error.toString());
-          }
-          if (!snapshot.hasData) return const Loader();
+        builder: (ctx, snap) {
+          if (snap.hasError) return ErrorText(error: snap.error.toString());
+          if (!snap.hasData) return const Loader();
 
-          final community = snapshot.data!;
-
-          // Safely handle possible nulls for lists
-          final members = community.members ?? [];
-          final mods = community.mods ?? [];
-
-          ctr = 0; // Reset counter on each build
+          final community = snap.data!;
+          final members = community.members;
 
           return ListView.builder(
             itemCount: members.length,
-            itemBuilder: (context, index) {
-              final member = members[index];
-              return StreamBuilder(
-                stream: Get.find<AuthController>().getUserData(member),
-                builder: (context, AsyncSnapshot userSnapshot) {
-                  if (userSnapshot.hasError) {
-                    return ErrorText(error: userSnapshot.error.toString());
-                  }
-                  if (!userSnapshot.hasData) return const Loader();
+            itemBuilder: (ctx2, i) {
+              final memberUid = members[i];
 
-                  final user = userSnapshot.data;
-                  // Check if user or expected properties are null
-                  if (user == null || user.uid == null || user.name == null) {
-                    return const Loader();
-                  }
+              return StreamBuilder<UserModel>(
+                stream: authController.getUserData(memberUid),
+                builder: (ctx3, userSnap) {
+                  if (userSnap.hasError)
+                    return ErrorText(error: userSnap.error.toString());
+                  if (!userSnap.hasData) return const Loader();
 
-                  // Example: Only add the member once if they're a mod.
-                  if (mods.contains(member) && ctr == 0) {
-                    uids.add(member);
-                  }
-                  ctr++;
+                  final user = userSnap.data!;
+                  final isOwner = user.uid == creatorUid;
+                  final checked = isOwner || selectedMods.contains(user.uid);
+                  final enabled = isCreator && !isOwner;
 
                   return CheckboxListTile(
-                    value: uids.contains(user.uid),
-                    onChanged: (val) {
-                      if (val == true) {
-                        addUid(user.uid);
-                      } else {
-                        removeUid(user.uid);
-                      }
-                    },
-                    title: Text(user.name),
+                    title: Text(user.name ?? 'Unknown'),
+                    value: checked,
+                    onChanged: enabled
+                        ? (val) => _onCheckboxChanged(user.uid, val)
+                        : null,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    secondary: isOwner
+                        ? const Icon(Icons.star, color: Colors.amber)
+                        : null,
                   );
                 },
               );

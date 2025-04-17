@@ -179,7 +179,7 @@ class PostController extends GetxController {
       final community = await getCommunityById(selectedCommunity.id).first;
       if (!community.mods.contains(user.uid)) {
         showSnackBar(
-            context, 'Only moderators can conduct elections in community.');
+            context, 'Only admins can conduct elections in community.');
         isLoading.value = false;
         return;
       }

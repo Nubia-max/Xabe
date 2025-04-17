@@ -4,12 +4,13 @@ class Community {
   final String id;
   final String name;
   final String avatar;
-  final String bio; // New field for bio
+  final String bio;
   final List<String> members;
   final List<String> pendingMembers;
   final List<String> mods;
-  final String campaignThumbnailUrl; // New field for campaign thumbnail
-  final String electionThumbnailUrl; // New field for election thumbnail
+  final String creatorUid; // ← NEW
+  final String campaignThumbnailUrl;
+  final String electionThumbnailUrl;
 
   Community({
     required this.id,
@@ -19,6 +20,7 @@ class Community {
     this.pendingMembers = const [],
     required this.members,
     required this.mods,
+    required this.creatorUid, // ← NEW
     this.campaignThumbnailUrl = '',
     this.electionThumbnailUrl = '',
   });
@@ -31,6 +33,7 @@ class Community {
     String? bio,
     List<String>? members,
     List<String>? mods,
+    String? creatorUid, // ← NEW
     String? campaignThumbnailUrl,
     String? electionThumbnailUrl,
   }) {
@@ -41,9 +44,10 @@ class Community {
       bio: bio ?? this.bio,
       members: members ?? this.members,
       mods: mods ?? this.mods,
+      creatorUid: creatorUid ?? this.creatorUid, // ← NEW
       campaignThumbnailUrl: campaignThumbnailUrl ?? this.campaignThumbnailUrl,
       electionThumbnailUrl: electionThumbnailUrl ?? this.electionThumbnailUrl,
-      pendingMembers: pendingMembers, // remains unchanged
+      pendingMembers: pendingMembers,
     );
   }
 
@@ -51,12 +55,13 @@ class Community {
     return {
       'id': id,
       'name': name,
-      'nameLower': name.toLowerCase(), // added for case-insensitive search
+      'nameLower': name.toLowerCase(),
       'avatar': avatar,
-      'bio': bio, // Include bio in the map
+      'bio': bio,
       'members': members,
       'mods': mods,
       'pendingMembers': pendingMembers,
+      'creatorUid': creatorUid, // ← NEW
       'campaignThumbnailUrl': campaignThumbnailUrl,
       'electionThumbnailUrl': electionThumbnailUrl,
     };
@@ -71,6 +76,7 @@ class Community {
       members: List<String>.from(map['members'] ?? []),
       pendingMembers: List<String>.from(map['pendingMembers'] ?? []),
       mods: List<String>.from(map['mods'] ?? []),
+      creatorUid: map['creatorUid'] as String? ?? '', // ← NEW
       campaignThumbnailUrl: map['campaignThumbnailUrl'] as String? ?? '',
       electionThumbnailUrl: map['electionThumbnailUrl'] as String? ?? '',
     );

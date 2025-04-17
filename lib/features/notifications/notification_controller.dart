@@ -11,13 +11,15 @@ class NotificationController extends GetxController {
   final NotificationRepository _notificationRepository;
   final NotiService _notiService;
 
+  // track which IDs we've already shown
   final Set<String> _shownNotificationIds = {};
-  // Reactive list to hold notifications.
-  var notifications = <NotificationModel>[].obs;
 
-  // Loading state if needed.
+  var notifications = <NotificationModel>[].obs;
   var isLoading = false.obs;
   var hasNewNotifications = false.obs;
+
+  // ← NEW: guard so we ignore the very first batch
+  bool _initialLoad = true;
 
   NotificationController({
     required NotificationRepository notificationRepository,
@@ -35,38 +37,45 @@ class NotificationController extends GetxController {
     }
   }
 
-  /// Call this method to start listening to notifications for a given user.
   void loadNotifications(String userId) {
+    // reset the flag any time you re-subscribe
+    _initialLoad = true;
+
     _notificationRepository.getNotifications(userId).listen(
-      (notificationList) {
-        final fresh = notificationList.cast<NotificationModel>();
-
-        // figure out which ones are newly arrived:
-        final newOnes =
-            fresh.where((n) => !_shownNotificationIds.contains(n.id)).toList();
-
-        // update your observable list
+        (List<NotificationModel> fresh) {
+      // 1) On the very first arrival, just seed our lists & IDs
+      if (_initialLoad) {
         notifications.assignAll(fresh);
-
-        // mark new ones as shown locally
-        for (final n in newOnes) {
+        for (var n in fresh) {
           _shownNotificationIds.add(n.id);
-
-          // show a system notification for each
-          _notiService.showNotification(
-            id: n.id.hashCode & 0x7FFFFFFF,
-            title: n.senderName,
-            body: n.message,
-          );
         }
-
-        // update your “has new” flag however you need
         hasNewNotifications.value = notifications.any((n) => !n.isProcessed);
-      },
-      onError: (error) {
-        print("Error loading notifications: $error");
-      },
-    );
+        _initialLoad = false;
+        return; // <--- skip showing system notifications here
+      }
+
+      // 2) Subsequent changes: diff out only brand-new IDs
+      final newOnes =
+          fresh.where((n) => !_shownNotificationIds.contains(n.id)).toList();
+
+      // update the displayed list
+      notifications.assignAll(fresh);
+
+      // show only those new ones
+      for (final n in newOnes) {
+        _shownNotificationIds.add(n.id);
+        _notiService.showNotification(
+          id: n.id.hashCode & 0x7FFFFFFF,
+          title: n.senderName,
+          body: n.message,
+        );
+      }
+
+      // update your “unprocessed” badge
+      hasNewNotifications.value = notifications.any((n) => !n.isProcessed);
+    }, onError: (err) {
+      print("Error loading notifications: $err");
+    });
   }
 
   /// Mark a notification as processed.

@@ -131,6 +131,7 @@ class CommunityController extends GetxController {
       mods: [uid],
       bio: bio,
       pendingMembers: [],
+      creatorUid: uid,
     );
 
     final res = await communityRepository.createCommunity(community);
@@ -297,26 +298,39 @@ class CommunityController extends GetxController {
 
   /// Add moderators.
   Future<void> addMods(
-      String communityId, List<String> uids, BuildContext context) async {
-    final res = await communityRepository.addMods(communityId, uids);
+    String communityId,
+    List<String> newMods,
+    BuildContext context,
+  ) async {
+    // 1) Fetch the “old” list of mods before we overwrite it
+    final community =
+        await communityRepository.getCommunityById(communityId).first;
+    final oldMods = community.mods;
+
+    // 2) Push the new list of mods up to Firestore
+    final res = await communityRepository.addMods(communityId, newMods);
     res.fold(
-      (failure) => showSnackBar(context, failure.message),
+      (failure) {
+        showSnackBar(context, failure.message);
+      },
       (_) async {
-        // Retrieve the community details to get the community name.
-        final community =
-            await communityRepository.getCommunityById(communityId).first;
-        // Send a notification to each newly added moderator.
-        for (final uid in uids) {
+        // 3) Compute who was *just* added
+        final justAdded = newMods.where((uid) => !oldMods.contains(uid));
+
+        // 4) Notify each of those—and only those
+        for (final uid in justAdded) {
           Get.find<NotificationController>().sendNotification(
             recipientId: uid,
             senderId: AuthController.to.userModel.value?.uid ?? 'system',
             senderName: 'System',
-            message: "You have been added as a moderator in ${community.name}",
+            message: "You have been added as an admin in ${community.name}",
             type: "new_mod",
             communityId: community.id,
             communityName: community.name,
           );
         }
+
+        // 5) Go back once it’s all done
         Get.back();
       },
     );
