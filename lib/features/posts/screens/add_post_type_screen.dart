@@ -51,10 +51,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       return;
     }
 
-    final selectedUsers = await showDialog<List<String>>(
+    List<String>? selectedUsers = await showDialog<List<String>>(
       context: context,
       builder: (context) {
-        String searchQuery = "";
+        String searchQuery = '';
         return StreamBuilder<List<Map<String, String>>>(
           stream: Get.find<CommunityController>()
               .fetchCommunityUsers(selectedCommunity!.id),
@@ -62,7 +62,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
             if (snapshot.hasError) {
               return AlertDialog(
                 title: const Text('Tag Users'),
-                content: Center(child: Text('Error loading users')),
+                content: const Center(child: Text('Error loading users')),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -83,16 +83,21 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                 ],
               );
             }
+
             final users = snapshot.data!;
-            final filteredUsers = users.where((user) {
-              final username = user['username'] ?? '';
-              return username.toLowerCase().contains(searchQuery.toLowerCase());
-            }).toList();
-            return AlertDialog(
-              title: const Text('Tag Users'),
-              content: StatefulBuilder(
-                builder: (context, setState) {
-                  return Column(
+
+            return StatefulBuilder(
+              builder: (context, setState) {
+                final filteredUsers = users.where((user) {
+                  final username = user['username'] ?? '';
+                  return username
+                      .toLowerCase()
+                      .contains(searchQuery.toLowerCase());
+                }).toList();
+
+                return AlertDialog(
+                  title: const Text('Tag Users'),
+                  content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TextField(
@@ -107,7 +112,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                       ),
                       const SizedBox(height: 10),
                       SizedBox(
-                        height: 200,
+                        height: 300,
                         width: double.maxFinite,
                         child: ListView.builder(
                           itemCount: filteredUsers.length,
@@ -123,28 +128,29 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                         ),
                       ),
                     ],
-                  );
-                },
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-              ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                );
+              },
             );
           },
         );
       },
     );
 
-    if (selectedUsers != null) {
+    if (selectedUsers != null && selectedUsers.isNotEmpty) {
       setState(() {
         while (taggedUsers.length <= imageIndex) {
           taggedUsers.add([]);
         }
         taggedUsers[imageIndex] = selectedUsers;
       });
+
       for (var uid in selectedUsers) {
         if (!taggedUsernames.containsKey(uid)) {
           final username =
@@ -182,7 +188,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       for (var file in res.files) {
         if (kIsWeb) {
           if (file.bytes != null) {
-            final uniqueId = "${DateTime.now().millisecondsSinceEpoch}_${file.name}";
+            final uniqueId =
+                "${DateTime.now().millisecondsSinceEpoch}_${file.name}";
             images.add({
               "id": uniqueId,
               "bytes": Uint8List.fromList(file.bytes!),

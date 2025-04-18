@@ -17,7 +17,8 @@ class CommunityScreen extends StatefulWidget {
   final String communityId;
   final String filter;
 
-  const CommunityScreen({super.key, required this.communityId, this.filter = ''});
+  const CommunityScreen(
+      {super.key, required this.communityId, this.filter = ''});
 
   @override
   _CommunityScreenState createState() => _CommunityScreenState();
@@ -125,7 +126,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 25),
                                       ),
-                                      child: const Text('Admin Tools'),
+                                      child: const Text('Mod Tools'),
                                     )
                                   else
                                     OutlinedButton(

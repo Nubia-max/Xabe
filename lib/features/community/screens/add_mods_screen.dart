@@ -68,7 +68,7 @@ class _AddModsScreenState extends State<AddModsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Admin'),
+        title: const Text('Manage Mods'),
         actions: [
           if (isCreator)
             IconButton(icon: const Icon(Icons.check), onPressed: _saveMods),

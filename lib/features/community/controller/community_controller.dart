@@ -323,7 +323,7 @@ class CommunityController extends GetxController {
             recipientId: uid,
             senderId: AuthController.to.userModel.value?.uid ?? 'system',
             senderName: 'System',
-            message: "You have been added as an admin in ${community.name}",
+            message: "You have been added as a moderator in ${community.name}",
             type: "new_mod",
             communityId: community.id,
             communityName: community.name,
