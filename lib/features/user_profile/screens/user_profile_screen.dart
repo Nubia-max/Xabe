@@ -48,119 +48,119 @@ class UserProfileScreen extends StatelessWidget {
         if (!snapshot.hasData) return const Loader();
         final user = snapshot.data!;
         return Scaffold(
-            body: NestedScrollView(
-                headerSliverBuilder: (context, innerBoxIsScrolled) {
-                  return [
-                    SliverAppBar(
-                      expandedHeight: 250,
-                      floating: true,
-                      snap: true,
-                      flexibleSpace: Stack(
-                        children: [
-                          Container(
-                            alignment: Alignment.bottomLeft,
-                            padding: currentUser.uid == uid
-                                ? const EdgeInsets.all(20).copyWith(
-                                    bottom: 70) // Leave space for edit button
-                                : const EdgeInsets.all(
-                                    20), // No extra bottom space
-                            child: kIsWeb
-                                ? CachedWebImage(
-                                    imageUrl: user.profilePic,
-                                    fit: BoxFit.cover,
-                                  )
-                                : CircleAvatar(
-                                    backgroundImage:
-                                        getImageProvider(user.profilePic),
-                                    radius: 45,
-                                  ),
-                          ),
-                          Container(
-                            alignment: Alignment.bottomLeft,
-                            padding: const EdgeInsets.all(20),
-                            // Conditionally render the edit button only if the currentUser.uid matches uid.
-                            child: currentUser.uid == uid
-                                ? OutlinedButton(
-                                    onPressed: () =>
-                                        navigateToEditUser(context),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 25),
-                                    ),
-                                    child: const Text("Edit Profile"),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.all(16),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate(
-                          [
-                            Text(
-                              'u/${user.name}',
-                              style: const TextStyle(
-                                  fontSize: 19, fontWeight: FontWeight.bold),
-                            ),
-                            if (user.bio.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(
-                                  user.bio,
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.grey),
-                                ),
+          body: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverAppBar(
+                  expandedHeight: 250,
+                  floating: true,
+                  snap: true,
+                  flexibleSpace: Stack(
+                    children: [
+                      Container(
+                        alignment: Alignment.bottomLeft,
+                        padding: currentUser.uid == uid
+                            ? const EdgeInsets.all(20).copyWith(
+                                bottom: 70) // Leave space for edit button
+                            : const EdgeInsets.all(20), // No extra bottom space
+                        child: kIsWeb
+                            ? CachedWebImage(
+                                imageUrl: user.profilePic,
+                                fit: BoxFit.cover,
+                              )
+                            : CircleAvatar(
+                                backgroundImage:
+                                    getImageProvider(user.profilePic),
+                                radius: 45,
                               ),
-                            const SizedBox(height: 10),
-                            const Divider(thickness: 2),
-                          ],
-                        ),
                       ),
-                    )
-                  ];
-                },
-                body: StreamBuilder<List<Post>>(
-                  stream: userProfileController.getUserPosts(
-                      uid), // Ensure this returns a Stream<List<Post>>
-                  builder: (context, snapshotPosts) {
-                    // Check for errors in the stream
-                    if (snapshotPosts.hasError) {
-                      // Display the error message
-                      return ErrorText(
-                        error: snapshotPosts.error.toString(),
-                      );
-                    }
+                      Container(
+                        alignment: Alignment.bottomLeft,
+                        padding: const EdgeInsets.all(20),
+                        // Conditionally render the edit button only if the currentUser.uid matches uid.
+                        child: currentUser.uid == uid
+                            ? OutlinedButton(
+                                onPressed: () => navigateToEditUser(context),
+                                style: ElevatedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 25),
+                                ),
+                                child: const Text("Edit Profile"),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate(
+                      [
+                        Text(
+                          'u/${user.name}',
+                          style: const TextStyle(
+                              fontSize: 19, fontWeight: FontWeight.bold),
+                        ),
+                        if (user.bio.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              user.bio,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.grey),
+                            ),
+                          ),
+                        const SizedBox(height: 10),
+                        const Divider(thickness: 2),
+                      ],
+                    ),
+                  ),
+                )
+              ];
+            },
+            body: StreamBuilder<List<Post>>(
+              stream: userProfileController.getUserPosts(
+                  uid), // Ensure this returns a Stream<List<Post>>
+              builder: (context, snapshotPosts) {
+                // Check for errors in the stream
+                if (snapshotPosts.hasError) {
+                  // Display the error message
+                  return ErrorText(
+                    error: snapshotPosts.error.toString(),
+                  );
+                }
 
-                    // If the data is still loading, show a loader
-                    if (!snapshotPosts.hasData) {
-                      return const Loader(); // Custom loading widget
-                    }
+                // If the data is still loading, show a loader
+                if (!snapshotPosts.hasData) {
+                  return const Loader(); // Custom loading widget
+                }
 
-                    // Safely access the list of posts
-                    final posts = snapshotPosts.data!;
+                // Safely access the list of posts
+                final posts = snapshotPosts.data!;
 
-                    // If there are no posts, display a message
-                    if (posts.isEmpty) {
-                      return const Center(child: Text('No posts available.'));
-                    }
+                // If there are no posts, display a message
+                if (posts.isEmpty) {
+                  return const Center(child: Text('No posts available.'));
+                }
 
-                    // Return the ListView.builder to display the posts
-                    return ListView.builder(
-                      itemCount: posts.length,
-                      itemBuilder: (context, index) {
-                        final post = posts[index];
+                // Return the ListView.builder to display the posts
+                return ListView.builder(
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    final post = posts[index];
 
-                        // Pass the post to your PostCard widget
-                        return PostCard(post: post);
-                      },
-                    );
+                    // Pass the post to your PostCard widget
+                    return PostCard(post: post);
                   },
-                )));
+                );
+              },
+            ),
+          ),
+        );
       },
     );
   }

@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -35,6 +34,9 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
   Community? selectedCommunity;
 
   DateTime? electionEndTime;
+
+  // Flag to track whether the share button has been clicked
+  bool isSharing = false;
 
   @override
   void dispose() {
@@ -228,32 +230,52 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
   }
 
   void sharePost() {
+    // Prevent multiple clicks on the share button by disabling it during sharing
+    if (isSharing) return;
+
+    setState(() {
+      isSharing = true; // Disable the button when the post is being shared
+    });
+
     final captionText = captionController.text.trim();
     final postController = Get.find<PostController>();
     if (widget.type == 'image' &&
         bannerFile != null &&
         titleController.text.isNotEmpty) {
-      postController.shareImagePost(
+      postController
+          .shareImagePost(
         context: context,
         title: titleController.text.trim(),
         caption: captionText,
         selectedCommunity: selectedCommunity ?? communities[0],
         file: bannerFile,
-      );
+      )
+          .then((_) {
+        setState(() {
+          isSharing = false; // Re-enable the button after post sharing
+        });
+      });
     } else if (widget.type == 'carousel' &&
         carouselImages.isNotEmpty &&
         titleController.text.isNotEmpty) {
       if (electionEndTime == null) {
         showSnackBar(context, "Please select an election end time.");
+        setState(() {
+          isSharing = false; // Re-enable the button
+        });
         return;
       }
       if (carouselImages.isNotEmpty &&
           (taggedUsers.length < carouselImages.length ||
               taggedUsers.any((tags) => tags.isEmpty))) {
         showSnackBar(context, "Please tag all the pictures before posting.");
+        setState(() {
+          isSharing = false; // Re-enable the button
+        });
         return;
       }
-      postController.shareCarouselPost(
+      postController
+          .shareCarouselPost(
         context: context,
         title: titleController.text.trim(),
         selectedCommunity: selectedCommunity ?? communities[0],
@@ -261,11 +283,17 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         taggedUsers: taggedUsers,
         caption: captionController.text.trim(),
         electionEndTime: electionEndTime,
-      );
+      )
+          .then((_) {
+        setState(() {
+          isSharing = false; // Re-enable the button after post sharing
+        });
+      });
     } else if (widget.type == 'carousel2' &&
         carouselImages.isNotEmpty &&
         titleController.text.isNotEmpty) {
-      postController.shareCarouselPost(
+      postController
+          .shareCarouselPost(
         context: context,
         title: titleController.text.trim(),
         selectedCommunity: selectedCommunity ?? communities[0],
@@ -273,9 +301,17 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         taggedUsers: <List<String>>[],
         isCarousel2: true,
         caption: captionText,
-      );
+      )
+          .then((_) {
+        setState(() {
+          isSharing = false; // Re-enable the button after post sharing
+        });
+      });
     } else {
       showSnackBar(context, "Please enter all the fields");
+      setState(() {
+        isSharing = false; // Re-enable the button
+      });
     }
   }
 
@@ -317,7 +353,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: sharePost,
+            onPressed:
+                isSharing ? null : sharePost, // Disable button if sharing
             child: const Text('Share'),
           ),
         ],
