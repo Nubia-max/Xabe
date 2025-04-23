@@ -53,29 +53,23 @@ class _AddThumbnailsPageState extends State<AddThumbnailsPage> {
     }
   }
 
-  // Compress image on mobile
+  /// Helper function to compress an image file (mobile only).
   Future<File?> compressImage(File file) async {
-    // If running on web, just return the original file.
-    if (kIsWeb) {
-      return file;
-    }
-
+    if (kIsWeb) return file; // Skip compression on web.
     final tempDir = await getTemporaryDirectory();
     final targetPath =
         '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-    // Only attempt compression on supported platforms.
     try {
-      final xfile = await FlutterImageCompress.compressAndGetFile(
+      final result = await FlutterImageCompress.compressAndGetFile(
         file.absolute.path,
         targetPath,
-        quality: 70, // Adjust quality (0-100)
-        minWidth: 800, // Optionally resize width
-        minHeight: 600, // Optionally resize height
+        quality: 70, // Adjust quality as needed.
+        minWidth: 800,
+        minHeight: 600,
       );
-      if (xfile == null) return null;
-      return File(xfile.path);
+      if (result == null) return file;
+      return File(result.path); // Convert XFile to File using path
     } catch (e) {
-      // If compression fails (e.g., plugin not implemented), return the original file.
       debugPrint('Compression failed: $e');
       return file;
     }

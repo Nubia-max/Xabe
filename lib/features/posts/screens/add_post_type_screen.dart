@@ -90,12 +90,15 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
             return StatefulBuilder(
               builder: (context, setState) {
-                final filteredUsers = users.where((user) {
-                  final username = user['username'] ?? '';
-                  return username
-                      .toLowerCase()
-                      .contains(searchQuery.toLowerCase());
-                }).toList();
+                // If nothing is typed, show all; otherwise only those starting with the query
+                final filteredUsers = searchQuery.isEmpty
+                    ? users
+                    : users.where((user) {
+                        final username = user['username'] ?? '';
+                        return username
+                            .toLowerCase()
+                            .startsWith(searchQuery.toLowerCase());
+                      }).toList();
 
                 return AlertDialog(
                   title: const Text('Tag Users'),

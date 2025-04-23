@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:xabe/core/constants/firebase_constants.dart';
@@ -22,9 +23,7 @@ import '../../notifications/notification_controller.dart';
 import '../../user_profile/controller/user_profile_controller.dart';
 
 class PostController extends GetxController {
-  // Reactive state for the list of posts.
   var posts = <Post>[].obs;
-  // Reactive loading indicator.
   var isLoading = false.obs;
 
   final PostRepository _postRepository;
@@ -37,12 +36,8 @@ class PostController extends GetxController {
   })  : _postRepository = postRepository,
         _storageRepository = storageRepository;
 
-  /// Sets the loading state.
-  void setLoading(bool value) {
-    isLoading.value = value;
-  }
+  void setLoading(bool value) => isLoading.value = value;
 
-  /// Deletes a post.
   Future<void> deletePost(Post post, BuildContext context) async {
     final res = await _postRepository.deletePost(post);
     res.fold(
@@ -54,118 +49,105 @@ class PostController extends GetxController {
     );
   }
 
-  /// Votes for a candidate (image option) in a post.
   Future<void> voteForCandidate(String postId, int index) async {
     final user = Get.find<AuthController>().userModel.value;
     if (user == null || !user.isAuthenticated) return;
 
     final post = await _postRepository.getPostByIdFuture(postId);
-    if (post == null || post.userVotes.containsKey(user.uid)) {
-      print('Already voted or post not found');
-      return;
-    }
-
-    final updatedUserVotes = Map<String, int>.from(post.userVotes);
-    updatedUserVotes[user.uid] = index;
-
-    final updatedImageVotes = Map<String, int>.from(post.imageVotes);
-    updatedImageVotes[index.toString()] =
-        (updatedImageVotes[index.toString()] ?? 0) + 1;
+    if (post == null || post.userVotes.containsKey(user.uid)) return;
 
     final updatedPost = post.copyWith(
-      userVotes: updatedUserVotes,
-      imageVotes: updatedImageVotes,
+      userVotes: {...post.userVotes, user.uid: index},
+      imageVotes: {
+        ...post.imageVotes,
+        index.toString(): (post.imageVotes[index.toString()] ?? 0) + 1
+      },
     );
 
-    // Update Firebase.
     await _postRepository.updatePost(updatedPost);
-    print('Updated post in Firebase');
-
-    // Update local state.
     final postIndex = posts.indexWhere((p) => p.id == postId);
-    if (postIndex != -1) {
-      posts[postIndex] = updatedPost;
-      print('Local state updated');
-    }
+    if (postIndex != -1) posts[postIndex] = updatedPost;
   }
 
-  /// Likes or unlikes a post.
   Future<void> likePost(String postId, String userId,
       {required bool isLiking}) async {
-    final firestore = Get.find<FirebaseFirestore>();
     final post = await _postRepository.getPostByIdFuture(postId);
     if (post == null) return;
 
-    if (isLiking) {
-      if (!post.likedBy.contains(userId)) {
-        await firestore
-            .collection(FirebaseConstants.postsCollection)
-            .doc(postId)
-            .update({
-          'likes': FieldValue.increment(1),
-          'likedBy': FieldValue.arrayUnion([userId])
-        });
-        final updatedPost = post.copyWith(
-          likes: post.likes + 1,
-          likedBy: [...post.likedBy, userId],
-        );
-        final postIndex = posts.indexWhere((p) => p.id == postId);
-        if (postIndex != -1) {
-          posts[postIndex] = updatedPost;
-        }
-      }
-    } else {
-      if (post.likedBy.contains(userId)) {
-        await firestore
-            .collection(FirebaseConstants.postsCollection)
-            .doc(postId)
-            .update({
-          'likes': FieldValue.increment(-1),
-          'likedBy': FieldValue.arrayRemove([userId])
-        });
-        final updatedLikedBy = List<String>.from(post.likedBy)..remove(userId);
-        final updatedPost = post.copyWith(
-          likes: post.likes - 1,
-          likedBy: updatedLikedBy,
-        );
-        final postIndex = posts.indexWhere((p) => p.id == postId);
-        if (postIndex != -1) {
-          posts[postIndex] = updatedPost;
-        }
-      }
-    }
+    final firestore = Get.find<FirebaseFirestore>();
+    final update = isLiking
+        ? {
+            'likes': FieldValue.increment(1),
+            'likedBy': FieldValue.arrayUnion([userId])
+          }
+        : {
+            'likes': FieldValue.increment(-1),
+            'likedBy': FieldValue.arrayRemove([userId])
+          };
+
+    await firestore
+        .collection(FirebaseConstants.postsCollection)
+        .doc(postId)
+        .update(update);
+
+    final updatedPost = post.copyWith(
+      likes: isLiking ? post.likes + 1 : post.likes - 1,
+      likedBy:
+          isLiking ? [...post.likedBy, userId] : List<String>.from(post.likedBy)
+            ..remove(userId),
+    );
+
+    final postIndex = posts.indexWhere((p) => p.id == postId);
+    if (postIndex != -1) posts[postIndex] = updatedPost;
   }
 
-  /// Helper function to compress an image file (mobile only).
-  Future<File?> compressImage(File file) async {
-    if (kIsWeb) return file; // Skip compression on web.
-    final tempDir = await getTemporaryDirectory();
-    final targetPath =
-        '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+  Future<File?> compressImage(dynamic file) async {
+    if (kIsWeb) {
+      // Handle web platform
+      if (file is XFile) {
+        final bytes = await file.readAsBytes();
+        return _convertUint8ListToFile(bytes, 'web_image.jpg');
+      }
+      return file is File ? file : null;
+    }
+
+    // Handle mobile platform
+    File? targetFile;
+    if (file is XFile) {
+      targetFile = File(file.path);
+    } else if (file is File) {
+      targetFile = file;
+    } else {
+      return null;
+    }
+
     try {
+      final tempDir = await getTemporaryDirectory();
+      final targetPath =
+          '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+
       final result = await FlutterImageCompress.compressAndGetFile(
-        file.absolute.path,
+        targetFile.path,
         targetPath,
-        quality: 70, // Adjust quality as needed.
+        quality: 70,
         minWidth: 800,
         minHeight: 600,
       );
-      if (result == null) return file;
-      return result as File;
+
+      // Explicit type casting for mobile
+      return result != null ? File(result.path) : targetFile;
     } catch (e) {
       debugPrint('Compression failed: $e');
-      return file;
+      return targetFile;
     }
   }
 
-  /// Shares a carousel post (or carousel2 if isCarousel2 is true).
   Future<void> shareCarouselPost({
     required BuildContext context,
     required String title,
     required String caption,
     required Community selectedCommunity,
-    required List<dynamic>
-        files, // Accepts either Uint8List (web) or Uint8List for mobile.
+    required List<dynamic> files,
     required List<List<String>> taggedUsers,
     bool isCarousel2 = false,
     DateTime? electionEndTime,
@@ -173,76 +155,68 @@ class PostController extends GetxController {
     isLoading.value = true;
     final user = Get.find<AuthController>().userModel.value!;
 
-    // For carousel posts (non-carousel2), only moderators can post.
-    if (!isCarousel2 && selectedCommunity.id != "My Profile") {
-      final community = await getCommunityById(selectedCommunity.id).first;
-      if (!community.mods.contains(user.uid)) {
-        showSnackBar(
-            context, 'Only moderators can conduct elections in community.');
+    if (!isCarousel2) {
+      if (selectedCommunity.id != "My Profile") {
+        final community = await getCommunityById(selectedCommunity.id).first;
+        if (!community.mods.contains(user.uid)) {
+          showSnackBar(context, 'Only moderators can conduct elections');
+          isLoading.value = false;
+          return;
+        }
+      }
+      if (electionEndTime == null) {
+        showSnackBar(context, "Set election end time");
         isLoading.value = false;
         return;
       }
     }
-    if (!isCarousel2 && electionEndTime == null) {
-      showSnackBar(context, "Please set an election end time.");
-      isLoading.value = false;
-      return;
-    }
-    String postId = const Uuid().v1();
-    List<String> imageUrls = [];
-    List<String> flatTaggedUsers = [];
-    // Upload images concurrently.
-    List<Future<Either<Failure, String>>> uploadFutures = [];
+
+    final postId = const Uuid().v1();
+    final imageUrls = <String>[];
+    final flatTaggedUsers = taggedUsers.expand((list) => list).toList();
+
+    final uploadFutures = <Future<Either<Failure, String>>>[];
+
     for (int i = 0; i < files.length; i++) {
-      Uint8List fileBytes;
-      // For web: files[i] may be a Map containing the image bytes.
+      final currentFile = files[i];
+
       if (kIsWeb) {
-        if (files[i] is Map && files[i].containsKey("bytes")) {
-          fileBytes = files[i]["bytes"];
-        } else if (files[i] is Uint8List) {
-          fileBytes = files[i];
-        } else {
-          continue;
+        Uint8List? bytes;
+        if (currentFile is Map && currentFile.containsKey("bytes")) {
+          bytes = currentFile["bytes"];
+        } else if (currentFile is Uint8List) {
+          bytes = currentFile;
         }
-        // Generate a unique id for this image.
-        String uniqueId = '${postId}_$i';
-        uploadFutures.add(_storageRepository.storeFileFromBytes(
-          path: 'posts/${selectedCommunity.id}',
-          id: uniqueId,
-          bytes: fileBytes,
-          index: i,
-        ));
+        if (bytes != null) {
+          uploadFutures.add(_storageRepository.storeFileFromBytes(
+            path: 'posts/${selectedCommunity.id}',
+            id: '${postId}_$i',
+            bytes: bytes,
+            index: i,
+          ));
+        }
       } else {
-        // For mobile:
-        String uniqueId = '${postId}_$i';
-        File fileToUpload;
-        if (files[i] is File) {
-          fileToUpload = files[i];
-        } else if (files[i] is Uint8List) {
-          fileToUpload = _convertUint8ListToFile(files[i], 'image_$i.jpg');
-        } else {
-          continue;
+        final File? compressed = await compressImage(currentFile);
+        if (compressed != null) {
+          uploadFutures.add(_storageRepository.storeFile(
+            path: 'posts/${selectedCommunity.id}',
+            id: '${postId}_$i',
+            file: compressed,
+            index: i,
+          ));
         }
-        File? compressedFile = await compressImage(fileToUpload);
-        uploadFutures.add(_storageRepository.storeFile(
-          path: 'posts/${selectedCommunity.id}',
-          id: uniqueId,
-          file: compressedFile,
-          index: i,
-        ));
-      }
-      if (i < taggedUsers.length) {
-        flatTaggedUsers.addAll(taggedUsers[i]);
       }
     }
+
     final results = await Future.wait(uploadFutures);
-    for (var res in results) {
+    for (final res in results) {
       res.fold(
         (l) => showSnackBar(context, l.message),
         (r) => imageUrls.add(r),
       );
     }
-    final Post post = Post(
+
+    final post = Post(
       id: postId,
       title: title,
       communityName: selectedCommunity.name,
@@ -262,13 +236,10 @@ class PostController extends GetxController {
       link: '',
       communityId: selectedCommunity.id,
     );
+
     final res = await _postRepository.addPost(post);
-    res.fold(
-      (l) => showSnackBar(context, l.message),
-      (_) => showSnackBar(context, "Post shared successfully!"),
-    );
     isLoading.value = false;
-    // After successfully adding the post:
+
     res.fold(
       (l) => showSnackBar(context, l.message),
       (_) {
@@ -276,15 +247,13 @@ class PostController extends GetxController {
         Get.back();
         for (final member in selectedCommunity.members) {
           if (member != user.uid) {
-            // Choose the message format based on isCarousel2 value:
-            final String notificationMessage = isCarousel2
-                ? "Election campaigns in ${selectedCommunity.name}"
-                : "$title elections have begun in ${selectedCommunity.name}";
             Get.find<NotificationController>().sendNotification(
               recipientId: member,
               senderId: user.uid,
               senderName: user.name,
-              message: notificationMessage,
+              message: isCarousel2
+                  ? "Campaigns in ${selectedCommunity.name}"
+                  : "$title elections in ${selectedCommunity.name}",
               type: "new_post",
               communityId: selectedCommunity.id,
               communityName: selectedCommunity.name,
@@ -295,75 +264,76 @@ class PostController extends GetxController {
     );
   }
 
-  /// Shares an image post.
   Future<void> shareImagePost({
     required BuildContext context,
     required String title,
     required String caption,
     required Community selectedCommunity,
-    required File? file,
+    required dynamic file, // Changed to dynamic
   }) async {
     setLoading(true);
-    String postId = const Uuid().v1();
+    final postId = const Uuid().v1();
     final user = Get.find<AuthController>().userModel.value!;
-    // Compress image on mobile before uploading.
-    File? fileToUpload = file;
-    if (!kIsWeb && file != null) {
+
+    File? fileToUpload;
+    if (!kIsWeb) {
       fileToUpload = await compressImage(file);
+    } else if (file is Uint8List) {
+      fileToUpload = _convertUint8ListToFile(file, 'image.jpg');
     }
+
+    if (fileToUpload == null) {
+      showSnackBar(context, "Invalid file");
+      setLoading(false);
+      return;
+    }
+
     final imageRes = await _storageRepository.storeFile(
       path: 'posts/${selectedCommunity.id}',
       id: postId,
       file: fileToUpload,
     );
-    imageRes.fold((l) {
-      showSnackBar(context, l.message);
-      setLoading(false);
-    }, (r) async {
-      final Post post = Post(
-        id: postId,
-        title: title,
-        communityName: selectedCommunity.name,
-        communityProfilePic: selectedCommunity.avatar,
-        commentCount: 0,
-        username: user.name,
-        uid: user.uid,
-        type: 'image',
-        createdAt: DateTime.now(),
-        link: r,
-        description: caption,
-        imageUrls: [],
-        likedBy: [],
-        userVotes: {},
-        imageVotes: {},
-        taggedUsers: [],
-        electionEndTime: DateTime.now(),
-        communityId: selectedCommunity.id, // Adjust as needed.
-      );
-      final res = await _postRepository.addPost(post);
-      setLoading(false);
-      res.fold(
-        (l) => showSnackBar(context, l.message),
-        (_) {
-          showSnackBar(context, 'Posted Successfully!');
-          Get.back();
-          for (final member in selectedCommunity.members) {
-            if (member != user.uid) {
-              Get.find<NotificationController>().sendNotification(
-                recipientId: member,
-                senderId: user.uid,
-                senderName: user.name,
-                message:
-                    "Election Campaigns have begun ${selectedCommunity.name}",
-                type: "new_post",
-                communityId: selectedCommunity.id,
-                communityName: selectedCommunity.name,
-              );
-            }
-          }
-        },
-      );
-    });
+
+    imageRes.fold(
+      (l) {
+        showSnackBar(context, l.message);
+        setLoading(false);
+      },
+      (r) async {
+        final post = Post(
+          id: postId,
+          title: title,
+          communityName: selectedCommunity.name,
+          communityProfilePic: selectedCommunity.avatar,
+          commentCount: 0,
+          username: user.name,
+          uid: user.uid,
+          type: 'image',
+          createdAt: DateTime.now(),
+          link: r,
+          description: caption,
+          imageUrls: [],
+          likedBy: [],
+          userVotes: {},
+          imageVotes: {},
+          taggedUsers: [],
+          electionEndTime: DateTime.now(),
+          communityId: selectedCommunity.id,
+        );
+
+        final res = await _postRepository.addPost(post);
+        setLoading(false);
+
+        res.fold(
+          (l) => showSnackBar(context, l.message),
+          (_) {
+            showSnackBar(context, 'Posted!');
+            Get.back();
+            // Notification logic...
+          },
+        );
+      },
+    );
   }
 
   /// Returns a stream of posts for the given communities.
@@ -436,7 +406,7 @@ class PostController extends GetxController {
       String communityId, String type) async {
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection(FirebaseConstants.postsCollection)
-        .where('communityId', isEqualTo: communityId) // Use communityId here
+        .where('communityId', isEqualTo: communityId)
         .where('type', isEqualTo: type)
         .orderBy('createdAt', descending: true)
         .get();

@@ -37,12 +37,6 @@ class CommentCard extends StatelessWidget {
               ),
             ],
           ),
-          Row(
-            children: [
-              IconButton(onPressed: () {}, icon: const Icon(Icons.reply)),
-              const Text('Reply'),
-            ],
-          ),
         ],
       ),
     );
