@@ -65,6 +65,7 @@ flutter:
 
   assets:
     - assets/images/google.png
+    - assets/images/apple.png
     - assets/images/logo.png
     - assets/animations/loginanimation.json
     - assets/animations/voteanimation.json

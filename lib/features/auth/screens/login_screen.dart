@@ -21,28 +21,49 @@ class LoginScreen extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
+          // fill available height, then distribute space
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Transform.translate(
-              offset: Offset(0, -25),
-              child: const Text(
-                'Cast a vote, Create a Legacy!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+            // a flexible top spacer
+            const Spacer(flex: 1),
+
+            // your title stays natural size
+            const Text(
+              'Cast a vote, Create a Legacy!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+                // ← here’s your purple text
+              ),
+            ),
+
+            // small fixed gap
+            const SizedBox(height: 20),
+
+            // make the Lottie shrink if needed
+            Flexible(
+              flex: 4,
+              child: SizedBox(
+                height: 500,
+                child: Lottie.asset(
+                  'assets/animations/loginanimation.json',
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
-            const SizedBox(height: 40),
-            Lottie.asset(
-              'assets/animations/loginanimation.json',
-              height: 250,
-            ),
-            const SizedBox(height: 40),
+
+            // replace big fixed gaps with a smaller one
+            const SizedBox(height: 20),
+
+            // buttons—if you still overflow, you can wrap these in Flexible too
             const SignInButton(),
+            const SizedBox(height: 20),
+            const AppleSignInButton(),
+
+            // bottom flexible spacer
+            const Spacer(flex: 1),
           ],
         ),
       ),
