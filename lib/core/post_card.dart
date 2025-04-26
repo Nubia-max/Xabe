@@ -7,6 +7,7 @@ import '../features/auth/controller/auth_controller.dart';
 import '../features/community/controller/community_controller.dart'
     show CommunityController;
 import '../features/posts/controller/post_controller.dart';
+import '../features/posts/screens/full_screen_image.dart';
 import '../features/posts/widgets/dot_indicator.dart';
 import '../features/posts/widgets/election_time.dart';
 import '../features/posts/widgets/like_animation.dart';
@@ -413,60 +414,77 @@ class _PostCardState extends State<PostCard>
                                                         .click,
                                                     child: GestureDetector(
                                                       onTap: () {
-                                                        if (mounted) {
-                                                          setState(() {
-                                                            _showTags =
-                                                                !_showTags;
-                                                          });
-                                                        }
+                                                        if (mounted)
+                                                          setState(() =>
+                                                              _showTags =
+                                                                  !_showTags);
+                                                      },
+                                                      onDoubleTap: () {
+                                                        // import FullScreenImagePage at top of file:
+                                                        // import 'path/to/full_screen_image.dart';
+                                                        Get.toNamed(
+                                                          '/full-screen-image',
+                                                          arguments: {
+                                                            'post': widget.post,
+                                                            'initialPage':
+                                                                _currentPage,
+                                                          },
+                                                        );
                                                       },
                                                       child: Stack(
                                                         children: [
-                                                          Image(
-                                                            image:
-                                                                getImageProvider(
-                                                                    imageUrl),
+                                                          CachedNetworkImage(
+                                                            imageUrl: imageUrl,
+                                                            placeholder: (_,
+                                                                    __) =>
+                                                                const Center(
+                                                                    child:
+                                                                        CircularProgressIndicator()),
+                                                            errorWidget:
+                                                                (_, __, ___) =>
+                                                                    Container(
+                                                              color: Colors
+                                                                  .grey[200],
+                                                              child:
+                                                                  const Center(
+                                                                child: Icon(
+                                                                    Icons
+                                                                        .broken_image,
+                                                                    size: 50,
+                                                                    color: Colors
+                                                                        .grey),
+                                                              ),
+                                                            ),
                                                             width:
                                                                 double.infinity,
                                                             height:
                                                                 double.infinity,
                                                             fit: BoxFit.cover,
-                                                            errorBuilder:
-                                                                (context, error,
-                                                                    stackTrace) {
-                                                              return Container(
-                                                                // Replace with a placeholder
-                                                                color: Colors
-                                                                    .grey[200],
-                                                                child:
-                                                                    const Center(
-                                                                  child: Icon(
-                                                                      Icons
-                                                                          .broken_image,
-                                                                      size: 50,
-                                                                      color: Colors
-                                                                          .grey),
-                                                                ),
-                                                              );
-                                                            },
                                                           ),
+
+                                                          // --- Tagged users overlay ---
                                                           if (_showTags &&
-                                                              groupedTaggedUsers
-                                                                      .length >
-                                                                  index)
+                                                              groupedTaggedUsers[
+                                                                      index]
+                                                                  .isNotEmpty)
                                                             ...groupedTaggedUsers[
                                                                     index]
-                                                                .map((userId) {
+                                                                .asMap()
+                                                                .entries
+                                                                .map((entry) {
+                                                              final tagIdx =
+                                                                  entry.key;
+                                                              final userId =
+                                                                  entry.value;
                                                               final username =
                                                                   userNames[
                                                                           userId] ??
-                                                                      "Loading...";
+                                                                      'Loading…';
                                                               return Positioned(
                                                                 left: 10,
                                                                 bottom: 10 +
-                                                                    (groupedTaggedUsers[index]
-                                                                            .indexOf(userId) *
-                                                                        20.0),
+                                                                    tagIdx *
+                                                                        20.0,
                                                                 child:
                                                                     GestureDetector(
                                                                   onTap: () =>
@@ -477,10 +495,6 @@ class _PostCardState extends State<PostCard>
                                                                     padding:
                                                                         const EdgeInsets
                                                                             .all(
-                                                                            4),
-                                                                    margin: const EdgeInsets
-                                                                        .only(
-                                                                        right:
                                                                             4),
                                                                     decoration:
                                                                         BoxDecoration(
@@ -504,6 +518,8 @@ class _PostCardState extends State<PostCard>
                                                                 ),
                                                               );
                                                             }),
+
+                                                          // --- Voting button (carousel only) ---
                                                           if (widget
                                                                   .post.type !=
                                                               'carousel2')
@@ -519,64 +535,61 @@ class _PostCardState extends State<PostCard>
                                                                               AuthController>()
                                                                       .userModel
                                                                       .value!;
-                                                                  final hasVoted = widget
+                                                                  if (widget
                                                                       .post
                                                                       .userVotes
                                                                       .containsKey(
                                                                           currentUser
-                                                                              .uid);
-                                                                  if (!hasVoted) {
-                                                                    if (widget.post.electionEndTime !=
-                                                                            null &&
-                                                                        DateTime.now().isAfter(widget
-                                                                            .post
-                                                                            .electionEndTime!)) {
-                                                                      showSnackBar(
-                                                                          context,
-                                                                          "Election has ended");
-                                                                      return;
-                                                                    }
-                                                                    String
-                                                                        taggedUser =
-                                                                        "Unknown";
-                                                                    if (groupedTaggedUsers[
-                                                                            index]
-                                                                        .isNotEmpty) {
-                                                                      final uid =
-                                                                          groupedTaggedUsers[index]
-                                                                              .first;
-                                                                      taggedUser =
-                                                                          userNames[uid] ??
-                                                                              "Loading...";
-                                                                    }
-                                                                    showDialog(
-                                                                      context:
-                                                                          context,
-                                                                      builder:
-                                                                          (context) {
-                                                                        return AlertDialog(
-                                                                          title:
-                                                                              const Text("Confirm Vote"),
-                                                                          content:
-                                                                              Text("Are you sure you want to vote for $taggedUser?"),
-                                                                          actions: [
-                                                                            TextButton(
-                                                                              onPressed: () => Navigator.of(context).pop(),
-                                                                              child: const Text("Cancel"),
-                                                                            ),
-                                                                            TextButton(
-                                                                              onPressed: () {
-                                                                                Navigator.of(context).pop();
-                                                                                Get.find<PostController>().voteForCandidate(widget.post.id, index);
-                                                                                setState(() {});
-                                                                              },
-                                                                              child: const Text("Vote"),
-                                                                            ),
-                                                                          ],
-                                                                        );
-                                                                      },
-                                                                    );
+                                                                              .uid))
+                                                                    return;
+                                                                  if (widget.post
+                                                                              .electionEndTime !=
+                                                                          null &&
+                                                                      DateTime.now().isAfter(widget
+                                                                          .post
+                                                                          .electionEndTime!)) {
+                                                                    showSnackBar(
+                                                                        context,
+                                                                        "Election has ended");
+                                                                    return;
                                                                   }
+                                                                  final taggedList =
+                                                                      groupedTaggedUsers[
+                                                                          index];
+                                                                  final taggedName = taggedList
+                                                                          .isNotEmpty
+                                                                      ? userNames[
+                                                                              taggedList.first] ??
+                                                                          'Loading…'
+                                                                      : 'Candidate';
+                                                                  showDialog(
+                                                                    context:
+                                                                        context,
+                                                                    builder: (_) =>
+                                                                        AlertDialog(
+                                                                      title: const Text(
+                                                                          "Confirm Vote"),
+                                                                      content: Text(
+                                                                          "Vote for $taggedName?"),
+                                                                      actions: [
+                                                                        TextButton(
+                                                                            onPressed: () =>
+                                                                                Navigator.pop(context),
+                                                                            child: const Text("Cancel")),
+                                                                        TextButton(
+                                                                          onPressed:
+                                                                              () {
+                                                                            Navigator.pop(context);
+                                                                            Get.find<PostController>().voteForCandidate(widget.post.id,
+                                                                                index);
+                                                                            setState(() {});
+                                                                          },
+                                                                          child:
+                                                                              const Text("Vote"),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  );
                                                                 },
                                                               ),
                                                             ),

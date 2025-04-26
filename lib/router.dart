@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+
 import 'package:xabe/features/auth/screens/login_screen.dart';
 import 'package:xabe/features/community/screens/add_mods_screen.dart';
 import 'package:xabe/features/community/screens/community_screen.dart';
@@ -8,15 +10,16 @@ import 'package:xabe/features/community/screens/mod_tools_screen.dart';
 import 'package:xabe/features/home/screens/home_screen.dart';
 import 'package:xabe/features/posts/screens/add_post_type_screen.dart';
 import 'package:xabe/features/posts/screens/comments_screen.dart';
-import 'package:xabe/features/user_profile/screens/edit_profile_screen.dart';
-import 'package:xabe/features/user_profile/screens/user_profile_screen.dart';
+import 'package:xabe/features/posts/screens/full_screen_image.dart';
 import 'package:xabe/features/graph/graph_screen.dart';
 import 'package:xabe/features/notifications/notification_screen.dart';
+import 'package:xabe/features/user_profile/screens/edit_profile_screen.dart';
+import 'package:xabe/features/user_profile/screens/user_profile_screen.dart';
 import 'package:xabe/responsive/mobile_screen_layout.dart';
 import 'package:xabe/responsive/responsive_layout.dart';
 import 'package:xabe/responsive/web_screen_layout.dart';
-import 'package:flutter/material.dart';
 
+import '../models/post_model.dart';
 import 'features/community/controller/community_controller.dart';
 import 'features/home/widgets/add_thumbnails.dart';
 
@@ -26,6 +29,7 @@ final List<GetPage> appRoutes = [
     name: '/login',
     page: () => const LoginScreen(),
   ),
+
   // Home Screen
   GetPage(
     name: '/',
@@ -34,6 +38,7 @@ final List<GetPage> appRoutes = [
       webScreenLayout: WebScreenLayout(child: const HomeScreen()),
     ),
   ),
+
   // Create Community Screen
   GetPage(
     name: '/create-community',
@@ -43,28 +48,27 @@ final List<GetPage> appRoutes = [
       webScreenLayout: WebScreenLayout(child: const CreateCommunityScreen()),
     ),
   ),
+
   // Community Screen (uses ID)
   GetPage(
     name: '/X/:id',
     page: () {
       final id = Get.parameters['id'];
+      final filter = Get.parameters['filter'] ?? '';
       if (id == null || id.isEmpty) {
         return const Scaffold(
-            body: Center(child: Text("Invalid association ID.")));
+          body: Center(child: Text("Invalid association ID.")),
+        );
       }
-      final filter = Get.parameters['filter'] ?? '';
       return ResponsiveLayout(
         mobileScreenLayout: MobileScreenLayout(
-            child: CommunityScreen(
-                communityId: id, filter: filter) // Fixed parameter
-            ),
+            child: CommunityScreen(communityId: id, filter: filter)),
         webScreenLayout: WebScreenLayout(
-            child: CommunityScreen(
-                communityId: id, filter: filter) // Fixed parameter
-            ),
+            child: CommunityScreen(communityId: id, filter: filter)),
       );
     },
   ),
+
   // Mod Tools Screen
   GetPage(
     name: '/mod-tools/:id',
@@ -72,14 +76,15 @@ final List<GetPage> appRoutes = [
       final id = Get.parameters['id'];
       if (id == null || id.isEmpty) {
         return const Scaffold(
-            body: Center(child: Text("Invalid association ID.")));
+          body: Center(child: Text("Invalid association ID.")),
+        );
       }
       final communityController = Get.find<CommunityController>();
       return StreamBuilder(
         stream: communityController.getCommunityById(id),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error: \${snapshot.error}'));
           }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -94,6 +99,7 @@ final List<GetPage> appRoutes = [
       );
     },
   ),
+
   // Edit Community Screen
   GetPage(
     name: '/edit-community/:id',
@@ -101,7 +107,8 @@ final List<GetPage> appRoutes = [
       final id = Get.parameters['id'];
       if (id == null || id.isEmpty) {
         return const Scaffold(
-            body: Center(child: Text("Invalid community ID.")));
+          body: Center(child: Text("Invalid community ID.")),
+        );
       }
       return ResponsiveLayout(
         mobileScreenLayout:
@@ -111,6 +118,7 @@ final List<GetPage> appRoutes = [
       );
     },
   ),
+
   // Add Moderators Screen
   GetPage(
     name: '/add-mods/:id',
@@ -118,23 +126,26 @@ final List<GetPage> appRoutes = [
       final id = Get.parameters['id'];
       if (id == null || id.isEmpty) {
         return const Scaffold(
-            body: Center(child: Text("Invalid community ID.")));
+          body: Center(child: Text("Invalid community ID.")),
+        );
       }
       return ResponsiveLayout(
-        mobileScreenLayout: MobileScreenLayout(
-            child: AddModsScreen(communityId: id)), // Fixed parameter
-        webScreenLayout: WebScreenLayout(
-            child: AddModsScreen(communityId: id)), // Fixed parameter
+        mobileScreenLayout:
+            MobileScreenLayout(child: AddModsScreen(communityId: id)),
+        webScreenLayout: WebScreenLayout(child: AddModsScreen(communityId: id)),
       );
     },
   ),
+
   // User Profile Screen
   GetPage(
     name: '/u/:uid',
     page: () {
       final uid = Get.parameters['uid'];
       if (uid == null || uid.isEmpty) {
-        return const Scaffold(body: Center(child: Text("Invalid user id.")));
+        return const Scaffold(
+          body: Center(child: Text("Invalid user id.")),
+        );
       }
       return ResponsiveLayout(
         mobileScreenLayout:
@@ -143,13 +154,16 @@ final List<GetPage> appRoutes = [
       );
     },
   ),
+
   // Edit Profile Screen
   GetPage(
     name: '/edit-profile/:uid',
     page: () {
       final uid = Get.parameters['uid'];
       if (uid == null || uid.isEmpty) {
-        return const Scaffold(body: Center(child: Text("Invalid user id.")));
+        return const Scaffold(
+          body: Center(child: Text("Invalid user id.")),
+        );
       }
       return ResponsiveLayout(
         mobileScreenLayout:
@@ -158,6 +172,7 @@ final List<GetPage> appRoutes = [
       );
     },
   ),
+
   // Add Post Type Screen
   GetPage(
     name: '/add-post/:type',
@@ -170,6 +185,7 @@ final List<GetPage> appRoutes = [
       );
     },
   ),
+
   // Comments Screen
   GetPage(
     name: '/post/:postId/comments',
@@ -182,6 +198,7 @@ final List<GetPage> appRoutes = [
       );
     },
   ),
+
   // Graph Screen
   GetPage(
     name: '/graph/:postId',
@@ -194,6 +211,19 @@ final List<GetPage> appRoutes = [
       );
     },
   ),
+
+  // Full-Screen Image Viewer
+  GetPage(
+    name: '/full-screen-image',
+    page: () {
+      final args = Get.arguments as Map<String, dynamic>;
+      return FullScreenImagePage(
+        post: args['post'] as Post,
+        initialPage: args['initialPage'] as int,
+      );
+    },
+  ),
+
   // Notifications Screen
   GetPage(
     name: '/notifications',
@@ -203,6 +233,7 @@ final List<GetPage> appRoutes = [
       webScreenLayout: WebScreenLayout(child: const NotificationsScreen()),
     ),
   ),
+
   // Add Thumbnails Screen
   GetPage(
     name: '/add-thumbnails',
