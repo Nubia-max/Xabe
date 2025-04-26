@@ -69,7 +69,7 @@ flutter:
     - assets/images/logo.png
     - assets/animations/loginanimation.json
     - assets/animations/voteanimation.json
-    - assets/images/banner.jpeg
+
 
   fonts:
     - family: MyFlutterApp
