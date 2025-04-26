@@ -12,6 +12,7 @@ class FullScreenImageScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text("Verification Image"),
+        leading: const BackButton(color: Colors.white),
       ),
       body: Center(
         child: InteractiveViewer(
