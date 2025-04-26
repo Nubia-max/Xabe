@@ -2,18 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xabe/core/utils.dart';
-
 import '../features/auth/controller/auth_controller.dart';
-import '../features/community/controller/community_controller.dart'
-    show CommunityController;
+import '../features/community/controller/community_controller.dart';
 import '../features/posts/controller/post_controller.dart';
-import '../features/posts/screens/full_screen_image.dart';
 import '../features/posts/widgets/dot_indicator.dart';
 import '../features/posts/widgets/election_time.dart';
 import '../features/posts/widgets/like_animation.dart';
 import '../features/posts/widgets/neo_button.dart';
 import 'package:lottie/lottie.dart';
-
 import '../models/community_model.dart';
 import '../models/post_model.dart';
 import '../theme/pallete.dart';
@@ -414,14 +410,6 @@ class _PostCardState extends State<PostCard>
                                                         .click,
                                                     child: GestureDetector(
                                                       onTap: () {
-                                                        if (mounted)
-                                                          setState(() =>
-                                                              _showTags =
-                                                                  !_showTags);
-                                                      },
-                                                      onDoubleTap: () {
-                                                        // import FullScreenImagePage at top of file:
-                                                        // import 'path/to/full_screen_image.dart';
                                                         Get.toNamed(
                                                           '/full-screen-image',
                                                           arguments: {
@@ -462,11 +450,10 @@ class _PostCardState extends State<PostCard>
                                                             fit: BoxFit.cover,
                                                           ),
 
-                                                          // --- Tagged users overlay ---
-                                                          if (_showTags &&
-                                                              groupedTaggedUsers[
-                                                                      index]
-                                                                  .isNotEmpty)
+                                                          // --- Tagged users overlay (always visible now) ---
+                                                          if (groupedTaggedUsers[
+                                                                  index]
+                                                              .isNotEmpty)
                                                             ...groupedTaggedUsers[
                                                                     index]
                                                                 .asMap()
@@ -519,7 +506,7 @@ class _PostCardState extends State<PostCard>
                                                               );
                                                             }),
 
-                                                          // --- Voting button (carousel only) ---
+                                                          // --- Voting button (only for carousel) ---
                                                           if (widget
                                                                   .post.type !=
                                                               'carousel2')
@@ -573,9 +560,11 @@ class _PostCardState extends State<PostCard>
                                                                           "Vote for $taggedName?"),
                                                                       actions: [
                                                                         TextButton(
-                                                                            onPressed: () =>
-                                                                                Navigator.pop(context),
-                                                                            child: const Text("Cancel")),
+                                                                          onPressed: () =>
+                                                                              Navigator.pop(context),
+                                                                          child:
+                                                                              const Text("Cancel"),
+                                                                        ),
                                                                         TextButton(
                                                                           onPressed:
                                                                               () {
