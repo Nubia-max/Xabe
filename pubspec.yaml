@@ -51,6 +51,7 @@ dependencies:
   google_mobile_ads: ^6.0.0
 
   path_provider: any
+  flutter_native_splash: ^2.4.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

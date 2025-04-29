@@ -14,8 +14,7 @@ class FullScreenImagePage extends StatefulWidget {
   final int initialPage;
 
   const FullScreenImagePage(
-      {Key? key, required this.post, this.initialPage = 0})
-      : super(key: key);
+      {super.key, required this.post, this.initialPage = 0});
 
   @override
   _FullScreenImagePageState createState() => _FullScreenImagePageState();

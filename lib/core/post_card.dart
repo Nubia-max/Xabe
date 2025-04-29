@@ -24,7 +24,7 @@ class PostCard extends StatefulWidget {
 
 class _PostCardState extends State<PostCard>
     with SingleTickerProviderStateMixin {
-  bool _showTags = false;
+  final bool _showTags = false;
   Map<String, String> userNames = {};
   final Map<int, bool> _isAnimating = {};
   bool isLiked = false;
@@ -527,8 +527,9 @@ class _PostCardState extends State<PostCard>
                                                                       .userVotes
                                                                       .containsKey(
                                                                           currentUser
-                                                                              .uid))
+                                                                              .uid)) {
                                                                     return;
+                                                                  }
                                                                   if (widget.post
                                                                               .electionEndTime !=
                                                                           null &&
