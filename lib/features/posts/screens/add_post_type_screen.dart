@@ -53,6 +53,14 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       return;
     }
 
+    // Get all already-tagged UIDs except the current image
+    final Set<String> alreadyTaggedUids = {};
+    for (int i = 0; i < taggedUsers.length; i++) {
+      if (i != imageIndex && taggedUsers[i].isNotEmpty) {
+        alreadyTaggedUids.addAll(taggedUsers[i]);
+      }
+    }
+
     List<String>? selectedUsers = await showDialog<List<String>>(
       context: context,
       builder: (context) {
@@ -61,22 +69,14 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
           stream: Get.find<CommunityController>()
               .fetchCommunityUsers(selectedCommunity!.id),
           builder: (context, snapshot) {
-            if (snapshot.hasError) {
+            if (snapshot.hasError || !snapshot.hasData) {
               return AlertDialog(
                 title: const Text('Tag Users'),
-                content: const Center(child: Text('Error loading users')),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                ],
-              );
-            }
-            if (!snapshot.hasData) {
-              return AlertDialog(
-                title: const Text('Tag Users'),
-                content: const Center(child: CircularProgressIndicator()),
+                content: Center(
+                  child: snapshot.hasError
+                      ? const Text('Error loading users')
+                      : const CircularProgressIndicator(),
+                ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -86,11 +86,12 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
               );
             }
 
-            final users = snapshot.data!;
+            final users = snapshot.data!
+                .where((user) => !alreadyTaggedUids.contains(user['uid']))
+                .toList();
 
             return StatefulBuilder(
               builder: (context, setState) {
-                // If nothing is typed, show all; otherwise only those starting with the query
                 final filteredUsers = searchQuery.isEmpty
                     ? users
                     : users.where((user) {

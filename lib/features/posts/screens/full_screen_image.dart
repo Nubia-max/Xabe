@@ -55,13 +55,53 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
 
   void _vote() {
     if (_alreadyVoted) return;
+
     if (widget.post.electionEndTime != null &&
         DateTime.now().isAfter(widget.post.electionEndTime!)) {
       Get.snackbar('Voting Closed', 'This election has ended.');
       return;
     }
-    Get.find<PostController>().voteForCandidate(widget.post.id, _currentPage);
-    setState(() => _alreadyVoted = true);
+
+    final taggedUsers = widget.post.taggedUsers;
+    final grouped = List.generate(
+      widget.post.imageUrls.length,
+      (i) => taggedUsers
+          .asMap()
+          .entries
+          .where((e) => e.key % widget.post.imageUrls.length == i)
+          .map((e) => e.value)
+          .toList(),
+    );
+
+    String taggedName = "Candidate";
+    final list = grouped[_currentPage];
+    if (list.isNotEmpty) {
+      final uid = list.first;
+      taggedName = userNames[uid] ?? "Loading...";
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Confirm Vote"),
+        content: Text("Are you sure you want to vote for $taggedName?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Get.find<PostController>()
+                  .voteForCandidate(widget.post.id, _currentPage);
+              setState(() => _alreadyVoted = true);
+            },
+            child: const Text("Vote"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _navigateToTaggedUserProfile(String userId) {
