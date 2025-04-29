@@ -14,6 +14,7 @@ class CreateCommunityScreen extends StatefulWidget {
 class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final TextEditingController communityNameController = TextEditingController();
   final TextEditingController bioController = TextEditingController();
+  bool requiresVerification = true;
 
   @override
   void dispose() {
@@ -26,6 +27,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     Get.find<CommunityController>().createCommunity(
       communityNameController.text.trim(),
       bioController.text.trim(),
+      requiresVerification,
       context,
     );
   }
@@ -37,7 +39,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       final isLoading = communityController.isLoading.value;
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Create Association'),
+          title: const Text('Create Community'),
         ),
         body: isLoading
             ? const Loader()
@@ -49,7 +51,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                     TextField(
                       controller: communityNameController,
                       decoration: const InputDecoration(
-                        hintText: 'Association Name',
+                        hintText: 'Community Name',
                         filled: true,
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(18),
@@ -66,6 +68,13 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                         contentPadding: EdgeInsets.all(18),
                       ),
                       maxLines: 3,
+                    ),
+                    SwitchListTile(
+                      value: requiresVerification,
+                      onChanged: (val) =>
+                          setState(() => requiresVerification = val),
+                      title: const Text(
+                          'Require ID verification for members to join'),
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton(

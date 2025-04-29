@@ -49,7 +49,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
   void tagUsers(int imageIndex) async {
     if (selectedCommunity == null) {
-      showSnackBar(context, "Please select association first");
+      showSnackBar(context, "Please select community first");
       return;
     }
 

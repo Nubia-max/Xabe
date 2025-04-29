@@ -130,13 +130,30 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                     )
                                   else
                                     OutlinedButton(
-                                      onPressed: () {
-                                        // Navigate to the verification screen.
-                                        Get.to(() =>
-                                            JoinCommunityVerificationScreen(
-                                                community: community));
+                                      onPressed: () async {
+                                        if (!community.requiresVerification) {
+                                          // Join immediately — add user to members and update Firestore
+                                          await Get.find<CommunityController>()
+                                              .joinCommunityImmediately(
+                                            community,
+                                            user.uid,
+                                          );
+
+                                          // Optionally show success message
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content: Text(
+                                                    'You have joined ${community.name}')),
+                                          );
+                                        } else {
+                                          // Requires verification — go to verification screen
+                                          Get.to(() =>
+                                              JoinCommunityVerificationScreen(
+                                                  community: community));
+                                        }
                                       },
-                                      style: ElevatedButton.styleFrom(
+                                      style: OutlinedButton.styleFrom(
                                         shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(20),
@@ -147,10 +164,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       child: Text(
                                         community.members.contains(user.uid)
                                             ? 'Joined'
-                                            : community.pendingMembers
-                                                    .contains(user.uid)
-                                                ? 'Pending'
-                                                : 'Join',
+                                            : 'Join',
                                       ),
                                     ),
                                 ],
@@ -244,7 +258,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     child: Text(
                       community.pendingMembers.contains(user.uid)
                           ? 'Your join request is pending approval.'
-                          : 'Join the association to view posts.',
+                          : 'Join the community to view posts.',
                     ),
                   ),
           );

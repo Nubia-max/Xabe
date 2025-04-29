@@ -34,7 +34,7 @@ class CommunityListDrawer extends StatelessWidget {
             isGuest
                 ? const SignInButton(isFromLogin: false)
                 : ListTile(
-                    title: const Text('Create Association'),
+                    title: const Text('Create Community'),
                     leading: const Icon(Icons.add),
                     onTap: navigateToCreateCommunity,
                   ),

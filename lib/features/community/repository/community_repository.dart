@@ -54,7 +54,7 @@ class CommunityRepository {
       final querySnapshot =
           await _communities.where('name', isEqualTo: community.id).get();
       if (querySnapshot.docs.isNotEmpty) {
-        throw 'Association with the same name already exists!';
+        throw 'Community with the same name already exists!';
       }
       // Save using UUID as document ID
       return right(_communities.doc(community.id).set(community.toMap()));

@@ -57,7 +57,7 @@ class SearchCommunityDelegate extends SearchDelegate {
         final communities = snapshot.data!;
         if (communities.isEmpty) {
           return const Center(
-            child: Text('no association found'),
+            child: Text('no community found'),
           );
         }
         return ListView.builder(

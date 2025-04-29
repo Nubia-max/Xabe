@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Icon(Icons.search, color: Colors.grey, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    showFullText ? 'Search association' : 'Search',
+                    showFullText ? 'Search community' : 'Search',
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ],

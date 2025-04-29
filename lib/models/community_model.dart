@@ -11,6 +11,7 @@ class Community {
   final String creatorUid; // ← NEW
   final String campaignThumbnailUrl;
   final String electionThumbnailUrl;
+  final bool requiresVerification;
 
   Community({
     required this.id,
@@ -23,6 +24,7 @@ class Community {
     required this.creatorUid, // ← NEW
     this.campaignThumbnailUrl = '',
     this.electionThumbnailUrl = '',
+    required this.requiresVerification,
   });
 
   Community copyWith({
@@ -36,6 +38,7 @@ class Community {
     String? creatorUid, // ← NEW
     String? campaignThumbnailUrl,
     String? electionThumbnailUrl,
+    bool? requiresVerification,
   }) {
     return Community(
       id: id ?? this.id,
@@ -48,6 +51,7 @@ class Community {
       campaignThumbnailUrl: campaignThumbnailUrl ?? this.campaignThumbnailUrl,
       electionThumbnailUrl: electionThumbnailUrl ?? this.electionThumbnailUrl,
       pendingMembers: pendingMembers,
+      requiresVerification: requiresVerification ?? this.requiresVerification,
     );
   }
 
@@ -64,6 +68,7 @@ class Community {
       'creatorUid': creatorUid, // ← NEW
       'campaignThumbnailUrl': campaignThumbnailUrl,
       'electionThumbnailUrl': electionThumbnailUrl,
+      'requiresVerification': requiresVerification,
     };
   }
 
@@ -79,6 +84,7 @@ class Community {
       creatorUid: map['creatorUid'] as String? ?? '', // ← NEW
       campaignThumbnailUrl: map['campaignThumbnailUrl'] as String? ?? '',
       electionThumbnailUrl: map['electionThumbnailUrl'] as String? ?? '',
+      requiresVerification: map['requiresVerification'] ?? true,
     );
   }
 

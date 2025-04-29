@@ -57,7 +57,7 @@ final List<GetPage> appRoutes = [
       final filter = Get.parameters['filter'] ?? '';
       if (id == null || id.isEmpty) {
         return const Scaffold(
-          body: Center(child: Text("Invalid association ID.")),
+          body: Center(child: Text("Invalid community ID.")),
         );
       }
       return ResponsiveLayout(
@@ -76,7 +76,7 @@ final List<GetPage> appRoutes = [
       final id = Get.parameters['id'];
       if (id == null || id.isEmpty) {
         return const Scaffold(
-          body: Center(child: Text("Invalid association ID.")),
+          body: Center(child: Text("Invalid community ID.")),
         );
       }
       final communityController = Get.find<CommunityController>();

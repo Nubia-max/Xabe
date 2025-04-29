@@ -23,6 +23,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   Uint8List? bannerBytes;
   File? profileFile;
   Uint8List? profileBytes;
+  bool? requiresVerification;
 
   late TextEditingController bioController;
   late TextEditingController communityNameController;
@@ -73,6 +74,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     // Update the community model with the new name before saving.
     final updatedCommunity = community.copyWith(
       name: communityNameController.text.trim(),
+      requiresVerification: requiresVerification,
     );
     Get.find<CommunityController>().editCommunity(
       profileFile: profileFile,
@@ -80,6 +82,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
       context: context,
       community: updatedCommunity,
       bio: bioController.text.trim(),
+      requiresVerification: requiresVerification!,
     );
   }
 
@@ -104,10 +107,12 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
         if (communityNameController.text.isEmpty) {
           communityNameController.text = community.name;
         }
+        if (requiresVerification == null)
+          requiresVerification = community.requiresVerification;
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Edit Association'),
+            title: const Text('Edit Community'),
             centerTitle: false,
             actions: [
               TextButton(
@@ -207,7 +212,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                           controller: bioController,
                           decoration: InputDecoration(
                             filled: true,
-                            hintText: 'Association Bio',
+                            hintText: 'Community Bio',
                             focusedBorder: OutlineInputBorder(
                               borderSide: const BorderSide(color: Colors.blue),
                               borderRadius: BorderRadius.circular(10),
@@ -215,6 +220,13 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.all(18),
                           ),
+                        ),
+                        SwitchListTile(
+                          value: requiresVerification!,
+                          onChanged: (val) =>
+                              setState(() => requiresVerification = val),
+                          title: const Text(
+                              'Require ID verification for members to join'),
                         ),
                       ],
                     ),

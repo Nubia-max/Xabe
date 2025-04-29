@@ -118,8 +118,8 @@ class CommunityController extends GetxController {
   }
 
   // Create community method
-  Future<void> createCommunity(
-      String name, String bio, BuildContext context) async {
+  Future<void> createCommunity(String name, String bio,
+      bool requiresVerification, BuildContext context) async {
     isLoading.value = true;
     final String uid = AuthController.to.userModel.value?.uid ?? '';
     final String communityId = Uuid().v4();
@@ -130,6 +130,7 @@ class CommunityController extends GetxController {
       members: [uid],
       mods: [uid],
       bio: bio,
+      requiresVerification: requiresVerification,
       pendingMembers: [],
       creatorUid: uid,
     );
@@ -139,7 +140,7 @@ class CommunityController extends GetxController {
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) {
-        showSnackBar(context, 'Association created successfully!');
+        showSnackBar(context, 'Community created successfully!');
         Get.back();
       },
     );
@@ -179,6 +180,29 @@ class CommunityController extends GetxController {
         showSnackBar(context, 'Join request sent. Awaiting approval.');
       },
     );
+  }
+
+  Future<void> joinCommunityImmediately(Community community, String uid) async {
+    try {
+      // Add to members
+      final updatedMembers = [...community.members, uid];
+
+      await FirebaseFirestore.instance
+          .collection('communities')
+          .doc(community.id)
+          .update({
+        'members': updatedMembers,
+        'pendingMembers': FieldValue.arrayRemove([uid]), // just in case
+      });
+
+      // Update local model if you're holding state
+      community.members.add(uid);
+      community.pendingMembers.remove(uid);
+
+      update(); // if using GetBuilder or GetX for UI updates
+    } catch (e) {
+      print('Error joining community: $e');
+    }
   }
 
   /// When moderator accepts a join request, send a notification to the user.
@@ -251,6 +275,7 @@ class CommunityController extends GetxController {
     required BuildContext context,
     required Community community,
     required String bio,
+    required bool requiresVerification,
   }) async {
     isLoading.value = true;
     if (profileFile != null) {
