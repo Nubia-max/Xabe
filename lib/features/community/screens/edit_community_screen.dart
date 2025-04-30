@@ -91,6 +91,8 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
     final communityController = Get.find<CommunityController>();
     // Use your theme controller if available; otherwise, fallback to Theme.of(context).
     final currentTheme = Theme.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return StreamBuilder<Community>(
       stream: communityController.getCommunityById(widget.communityId),
       builder: (context, snapshot) {
@@ -112,12 +114,19 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Edit Community'),
-            centerTitle: false,
+            title: const Text(
+              'Edit Community',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+            backgroundColor: isDarkMode ? Colors.black : Colors.white,
+            elevation: 0,
+            iconTheme:
+                IconThemeData(color: isDarkMode ? Colors.white : Colors.black),
             actions: [
               TextButton(
                 onPressed: () => save(community),
-                child: const Text('Save'),
+                child:
+                    const Text('Save', style: TextStyle(color: Colors.purple)),
               ),
             ],
           ),
@@ -126,11 +135,11 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
             return isLoading
                 ? const Loader()
                 : Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 30),
                         // Banner/Profile section.
                         SizedBox(
                           height: 200,
@@ -191,11 +200,19 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                             filled: true,
                             hintText: 'Enter Community Name',
                             focusedBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.blue),
-                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                  color:
+                                      isDarkMode ? Colors.white : Colors.blue),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.all(18),
+                            hintStyle: TextStyle(
+                                color:
+                                    isDarkMode ? Colors.white70 : Colors.black),
+                            fillColor: isDarkMode
+                                ? Colors.grey[800]
+                                : Colors.grey[100],
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -214,19 +231,32 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                             filled: true,
                             hintText: 'Community Bio',
                             focusedBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.blue),
-                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                  color:
+                                      isDarkMode ? Colors.white : Colors.blue),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.all(18),
+                            hintStyle: TextStyle(
+                                color:
+                                    isDarkMode ? Colors.white70 : Colors.black),
+                            fillColor: isDarkMode
+                                ? Colors.grey[800]
+                                : Colors.grey[100],
                           ),
                         ),
+                        const SizedBox(height: 20),
                         SwitchListTile(
                           value: requiresVerification!,
                           onChanged: (val) =>
                               setState(() => requiresVerification = val),
-                          title: const Text(
-                              'Require ID verification for members to join'),
+                          title: Text(
+                              'Require ID verification for members to join',
+                              style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black)),
                         ),
                       ],
                     ),

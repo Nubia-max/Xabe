@@ -162,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         final communities = snapshot.data!;
         if (communities.isEmpty) {
-          return const Center(child: Text('No associations found.'));
+          return const Center(child: Text('No community found.'));
         }
         return ListView.builder(
           itemCount: communities.length,
