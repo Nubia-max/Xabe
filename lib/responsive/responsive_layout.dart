@@ -15,7 +15,7 @@ class ResponsiveLayout extends StatelessWidget {
     // You can adjust the threshold (e.g. 800) as needed.
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth > 900) {
+        if (constraints.maxWidth > 700) {
           return webScreenLayout;
         } else {
           return mobileScreenLayout;

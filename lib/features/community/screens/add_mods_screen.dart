@@ -71,7 +71,14 @@ class _AddModsScreenState extends State<AddModsScreen> {
         title: const Text('Manage Mods'),
         actions: [
           if (isCreator)
-            IconButton(icon: const Icon(Icons.check), onPressed: _saveMods),
+            TextButton(
+              onPressed: _saveMods,
+              child: const Text(
+                'Save',
+                style: TextStyle(
+                    color: Colors.purple, fontWeight: FontWeight.bold),
+              ),
+            ),
         ],
       ),
       body: StreamBuilder<Community>(

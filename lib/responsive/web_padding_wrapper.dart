@@ -7,7 +7,7 @@ class WebPaddingWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 900) {
+    if (screenWidth > 700) {
       return Center(
         child: Container(
           width: 700,
