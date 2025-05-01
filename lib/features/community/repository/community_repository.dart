@@ -166,6 +166,25 @@ class CommunityRepository {
             .toList());
   }
 
+  /// Deletes the community document (and optionally all its posts).
+  FutureVoid deleteCommunity(String communityId) async {
+    try {
+      // 1) Delete all posts in that community
+      final postsSnapshot =
+          await _posts.where('communityId', isEqualTo: communityId).get();
+      for (var doc in postsSnapshot.docs) {
+        await _posts.doc(doc.id).delete();
+      }
+
+      // 2) Delete the community itself
+      await _communities.doc(communityId).delete();
+
+      return right(null);
+    } catch (e) {
+      return left(Failure(e.toString()));
+    }
+  }
+
   // Firestore references
   CollectionReference get _communities =>
       _firestore.collection(FirebaseConstants.communitiesCollection);

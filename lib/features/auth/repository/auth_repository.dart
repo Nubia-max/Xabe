@@ -113,4 +113,30 @@ class AuthRepository {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
+
+  /// Deletes the currently signed-in user and their Firestore profile.
+  Future<Either<Failure, void>> deleteAccount() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        return left(Failure('No user is currently signed in.'));
+      }
+
+      final uid = user.uid;
+
+      // 1) Delete any Firestore user‐doc
+      await _firestore.collection('users').doc(uid).delete();
+
+      // 2) Delete Firebase Auth user
+      await user.delete();
+
+      return right(null);
+    } on FirebaseAuthException catch (e) {
+      return left(Failure(e.message ?? 'Failed to delete account.'));
+    } catch (e) {
+      return left(Failure(e.toString()));
+    }
+  }
+
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 }

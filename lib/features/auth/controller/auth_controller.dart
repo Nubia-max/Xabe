@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:get/get.dart';
 import 'package:xabe/features/auth/repository/auth_repository.dart';
 import 'package:xabe/models/user_model.dart';
+import '../../../core/failure.dart';
 import '../../../models/community_model.dart';
 
 class AuthController extends GetxController {
@@ -82,6 +84,23 @@ class AuthController extends GetxController {
     await _authRepository.logOut();
     userModel.value = null;
     Get.offAllNamed('/login');
+  }
+
+  /// Deletes the current user's account.
+  /// Throws on failure so the UI can catch and display.
+  Future<void> deleteAccount() async {
+    isLoading.value = true;
+    final Either<Failure, void> result = await _authRepository.deleteAccount();
+    isLoading.value = false;
+
+    result.fold(
+      (failure) => throw Exception(failure.message),
+      (_) {
+        // Clear local state and navigate to login:
+        userModel.value = null;
+        Get.offAllNamed('/login');
+      },
+    );
   }
 
   /// Checks if the current user (from Firebase) is a moderator of the community.

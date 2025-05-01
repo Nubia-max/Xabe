@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:xabe/theme/pallete.dart';
 import '../../../theme/theme_controller.dart';
 import '../../auth/controller/auth_controller.dart';
+import '../delegates/settings_screen.dart';
 
 class ProfileDrawer extends StatelessWidget {
   const ProfileDrawer({super.key});
@@ -54,6 +55,14 @@ class ProfileDrawer extends StatelessWidget {
                 ),
               ),
             ),
+
+            // ← New Settings entry
+            ListTile(
+              title: const Text('Settings'),
+              leading: const Icon(Icons.settings),
+              onTap: () => Get.to(() => const SettingsScreen()),
+            ),
+
             ListTile(
               title: const Text('Log Out'),
               leading: Icon(Icons.logout, color: Pallete.redColor),
