@@ -432,7 +432,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                     children: [
                       Expanded(
                         child: Text(electionEndTime == null
-                            ? "Select Election End Time"
+                            ? "Election End Time"
                             : "Election End: ${electionEndTime!.toLocal()}"),
                       ),
                       IconButton(

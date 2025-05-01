@@ -16,32 +16,45 @@ class MyHorizontalBarGraph extends StatelessWidget {
     double maxVote = votesSummary.isNotEmpty
         ? votesSummary.reduce((a, b) => a > b ? a : b)
         : 1;
-    // Increase the maximum bar width to extend the length of the graph.
-    const double maxBarWidth = 250.0;
-    // Define the fixed width for the name container.
+    const double maxBarWidth = 250.0; // Increase the bar width
     const double nameWidth = 80.0;
+
+    // Color Palette for bars: Can be expanded as needed
+    List<Color> barColors = [
+      Colors.blue.shade700,
+      Colors.red.shade700,
+      Colors.green.shade700,
+      Colors.orange.shade700,
+      Colors.purple.shade700,
+      Colors.teal.shade700,
+      Colors.indigo.shade700,
+      Colors.amber.shade700,
+      Colors.pink.shade700,
+      Colors.cyan.shade700,
+    ];
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(votesSummary.length, (index) {
           double vote = votesSummary[index];
-          // Calculate proportional width for the bar.
           double barWidth = maxVote > 0 ? (vote / maxVote) * maxBarWidth : 0;
 
-          // Split the tagged user's name into two parts if possible.
           List<String> nameParts = taggedUsers[index].split(' ');
           String firstName =
               nameParts.isNotEmpty ? nameParts.first : taggedUsers[index];
           String secondName =
               nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
+          // Cycle through the color palette dynamically
+          Color barColor = barColors[index % barColors.length];
+
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Fixed width for name column.
+                // Name column with fixed width.
                 SizedBox(
                   width: nameWidth,
                   child: Column(
@@ -75,12 +88,11 @@ class MyHorizontalBarGraph extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Bar section expands to available space.
+                // Bar section expands based on vote count.
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final barMaxWidth = constraints.maxWidth;
-                      // Calculate bar width proportionally.
                       double vote = votesSummary[index];
                       double barWidth =
                           maxVote > 0 ? (vote / maxVote) * barMaxWidth : 0;
@@ -92,15 +104,7 @@ class MyHorizontalBarGraph extends StatelessWidget {
                             width: barWidth,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(4),
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.blue.shade700,
-                                  Colors.cyan,
-                                  Colors.cyanAccent,
-                                ],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
+                              color: barColor, // Apply the dynamic color
                             ),
                           ),
                           Positioned(
@@ -113,10 +117,7 @@ class MyHorizontalBarGraph extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
-                                  // Color for highest vote is purple (adjust if needed).
-                                  color: vote == maxVote
-                                      ? Colors.purple
-                                      : Colors.grey,
+                                  color: Colors.grey,
                                 ),
                               ),
                             ),
