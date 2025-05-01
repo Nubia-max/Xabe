@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:xabe/core/utils.dart';
 import 'package:xabe/models/community_model.dart';
 
@@ -321,9 +322,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTypeImage = widget.type == 'image';
-    final isTypeLink = widget.type == 'link';
-    final isTypeText = widget.type == 'text';
     final isTypeCarousel = widget.type == 'carousel';
     final isTypeCarousel2 = widget.type == 'carousel2';
     final postController = Get.find<PostController>();
@@ -367,267 +365,226 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         if (postController.isLoading.value) {
           return const Loader();
         }
-        return Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    filled: true,
-                    hintText: 'Election title',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(18),
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      hintText: 'Election title',
+                      border: InputBorder.none,
+                      counterText: '',
+                    ),
+                    maxLength: 30,
                   ),
-                  maxLength: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Select Community',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              StreamBuilder<List<Community>>(
+                stream:
+                    Get.find<CommunityController>().getUserCommunitiesStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  }
+                  if (!snapshot.hasData) {
+                    return const Loader();
+                  }
+
+                  final data = snapshot.data!;
+                  communities = data;
+
+                  if (data.isEmpty) {
+                    return const Text("No communities available.");
+                  }
+
+                  if (selectedCommunity == null) {
+                    final routeCommunity = Get.parameters['community'];
+                    selectedCommunity = routeCommunity != null
+                        ? data.firstWhere(
+                            (comm) => comm.name == routeCommunity,
+                            orElse: () => data[0],
+                          )
+                        : data[0];
+                  }
+
+                  return DropdownButtonFormField<Community>(
+                    decoration: InputDecoration(
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    value: selectedCommunity ?? data[0],
+                    items: data
+                        .map((e) => DropdownMenuItem<Community>(
+                              value: e,
+                              child: Text(e.name),
+                            ))
+                        .toList(),
+                    onChanged: (val) {
+                      if (!mounted) return;
+                      setState(() {
+                        selectedCommunity = val;
+                      });
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              if (isTypeCarousel)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        electionEndTime == null
+                            ? "Election End Time"
+                            : "Election End Time: ${DateFormat('yyyy-MM-dd').format(electionEndTime!)} at ${DateFormat('HH:mm').format(electionEndTime!)}",
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.access_time),
+                      onPressed: pickElectionTime,
+                    ),
+                  ],
+                ),
+              if (isTypeCarousel2) ...[
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: pickImages,
+                  icon: const Icon(Icons.photo_library),
+                  label: const Text("Pick Images"),
                 ),
                 const SizedBox(height: 10),
-                const SizedBox(height: 20),
-                const Align(
-                  alignment: Alignment.topLeft,
-                  child: Text('Select Community'),
-                ),
-                StreamBuilder<List<Community>>(
-                  stream: Get.find<CommunityController>()
-                      .getUserCommunitiesStream(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    }
-                    if (!snapshot.hasData) {
-                      return const Loader();
-                    }
-                    final data = snapshot.data!;
-                    communities = data;
-                    if (data.isEmpty) {
-                      return const SizedBox();
-                    }
-                    if (selectedCommunity == null) {
-                      final routeCommunity = Get.parameters['community'];
-                      selectedCommunity = routeCommunity != null
-                          ? data.firstWhere(
-                              (comm) => comm.name == routeCommunity,
-                              orElse: () => data[0])
-                          : data[0];
-                    }
-                    return DropdownButton<Community>(
-                      value: selectedCommunity ?? data[0],
-                      items: data
-                          .map((e) => DropdownMenuItem<Community>(
-                              value: e, child: Text(e.name)))
-                          .toList(),
-                      onChanged: (val) {
-                        if (!mounted) return;
-                        setState(() {
-                          selectedCommunity = val;
-                        });
-                      },
-                    );
-                  },
-                ),
-                if (isTypeCarousel) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(electionEndTime == null
-                            ? "Election End Time"
-                            : "Election End: ${electionEndTime!.toLocal()}"),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.access_time),
-                        onPressed: pickElectionTime,
-                      ),
-                    ],
-                  ),
-                ],
-                if (isTypeImage)
-                  GestureDetector(
-                    onTap: selectBannerImage,
-                    child: DottedBorder(
-                      borderType: BorderType.RRect,
-                      radius: const Radius.circular(10),
-                      dashPattern: const [10, 4],
-                      strokeCap: StrokeCap.round,
-                      child: Container(
-                        width: double.infinity,
+                carouselImages.isNotEmpty
+                    ? SizedBox(
                         height: 150,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: carouselImages.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            return buildMediaPreview(carouselImages[index]);
+                          },
                         ),
-                        child: bannerFile != null
-                            ? (kIsWeb
-                                ? Image.memory(bannerBytes!)
-                                : Image.file(bannerFile!))
-                            : const Center(
-                                child: Icon(
-                                  Icons.camera_alt_outlined,
-                                  size: 40,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                if (isTypeCarousel2)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ElevatedButton(
-                        onPressed: pickImages,
-                        child: const Text("Pick Images"),
-                      ),
-                      const SizedBox(height: 10),
-                      carouselImages.isNotEmpty
-                          ? SizedBox(
-                              height: 150,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: carouselImages.length,
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: buildMediaPreview(
-                                        carouselImages[index]),
-                                  );
-                                },
-                              ),
-                            )
-                          : GestureDetector(
-                              onTap: pickImages,
-                              child: DottedBorder(
-                                borderType: BorderType.RRect,
-                                radius: const Radius.circular(10),
-                                dashPattern: const [10, 4],
-                                strokeCap: StrokeCap.round,
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 150,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.photo_library_outlined,
-                                      size: 40,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ],
-                  ),
-                if (isTypeCarousel)
-                  GestureDetector(
-                    onTap: pickImages,
-                    child: DottedBorder(
-                      borderType: BorderType.RRect,
-                      radius: const Radius.circular(10),
-                      dashPattern: const [10, 4],
-                      strokeCap: StrokeCap.round,
-                      child: Container(
-                        width: double.infinity,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: carouselImages.isNotEmpty
-                            ? ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: carouselImages.length,
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: Stack(
-                                      children: [
-                                        buildMediaPreview(
-                                            carouselImages[index]),
-                                        Positioned(
-                                          bottom: 10,
-                                          right: 10,
-                                          child: IconButton(
-                                            onPressed: () => tagUsers(index),
-                                            icon: const Icon(
-                                              Icons.tag,
-                                              color: Colors.white,
-                                            ),
+                      )
+                    : buildEmptyImageSelector(),
+              ],
+              if (isTypeCarousel) const SizedBox(height: 20),
+              if (isTypeCarousel)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    carouselImages.isNotEmpty
+                        ? SizedBox(
+                            height: 150,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: carouselImages.length,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12.0),
+                                  child: Stack(
+                                    children: [
+                                      buildMediaPreview(carouselImages[index]),
+                                      Positioned(
+                                        bottom: 10,
+                                        right: 10,
+                                        child: IconButton(
+                                          onPressed: () => tagUsers(index),
+                                          icon: const Icon(
+                                            Icons.tag,
+                                            color: Colors.white,
                                           ),
                                         ),
-                                        if (taggedUsers.length > index &&
-                                            taggedUsers[index].isNotEmpty)
-                                          Positioned(
-                                            bottom: 10,
-                                            left: 10,
-                                            child: Wrap(
-                                              children: taggedUsers[index]
-                                                  .map((uid) => Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(4),
-                                                        margin: const EdgeInsets
-                                                            .only(right: 4),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.black
-                                                              .withOpacity(0.5),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(4),
+                                      ),
+                                      if (taggedUsers.length > index &&
+                                          taggedUsers[index].isNotEmpty)
+                                        Positioned(
+                                          bottom: 10,
+                                          left: 10,
+                                          child: Wrap(
+                                            children: taggedUsers[index]
+                                                .map((uid) => Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      margin:
+                                                          const EdgeInsets.only(
+                                                              right: 4),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.black
+                                                            .withOpacity(0.6),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        taggedUsernames[uid] ??
+                                                            'Fetching...',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 12,
                                                         ),
-                                                        child: Text(
-                                                          taggedUsernames[
-                                                                  uid] ??
-                                                              'Fetching...',
-                                                          style:
-                                                              const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 12,
-                                                          ),
-                                                        ),
-                                                      ))
-                                                  .toList(),
-                                            ),
+                                                      ),
+                                                    ))
+                                                .toList(),
                                           ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              )
-                            : const Center(
-                                child: Icon(
-                                  Icons.photo_library_outlined,
-                                  size: 40,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                if (isTypeText)
-                  TextField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(
-                      filled: true,
-                      hintText: 'Enter Description here',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(18),
-                    ),
-                    maxLines: 5,
-                  ),
-                if (isTypeLink)
-                  TextField(
-                    controller: linkController,
-                    decoration: const InputDecoration(
-                      filled: true,
-                      hintText: 'Enter link here',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(18),
-                    ),
-                  ),
-              ],
-            ),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : buildEmptyImageSelector(),
+                  ],
+                ),
+            ],
           ),
         );
       }),
+    );
+  }
+
+  Widget buildEmptyImageSelector() {
+    return GestureDetector(
+      onTap: pickImages,
+      child: DottedBorder(
+        borderType: BorderType.RRect,
+        radius: const Radius.circular(10),
+        dashPattern: const [10, 4],
+        strokeCap: StrokeCap.round,
+        child: Container(
+          width: double.infinity,
+          height: 150,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.photo_library_outlined,
+              size: 40,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
