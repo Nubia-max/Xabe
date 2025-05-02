@@ -156,25 +156,68 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               else
                                 OutlinedButton(
                                   onPressed: () async {
-                                    if (!community.requiresVerification) {
-                                      await communityController
-                                          .joinCommunityImmediately(
-                                        community,
-                                        user.uid,
-                                      );
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
+                                    final isMember =
+                                        community.members.contains(user.uid);
+
+                                    if (isMember) {
+                                      // Confirm before leaving
+                                      final shouldLeave =
+                                          await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text("Leave Community"),
                                           content: Text(
-                                              'You have joined ${community.name}'),
+                                              "Are you sure you want to leave ${community.name}?"),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(false),
+                                              child: const Text("Cancel"),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(true),
+                                              child: const Text("Leave",
+                                                  style: TextStyle(
+                                                      color: Colors.red)),
+                                            ),
+                                          ],
                                         ),
                                       );
+
+                                      if (shouldLeave == true) {
+                                        await communityController
+                                            .leaveCommunity(
+                                                community, user.uid);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'You have left ${community.name}'),
+                                          ),
+                                        );
+                                      }
                                     } else {
-                                      Get.to(
-                                        () => JoinCommunityVerificationScreen(
-                                          community: community,
-                                        ),
-                                      );
+                                      if (!community.requiresVerification) {
+                                        await communityController
+                                            .joinCommunityImmediately(
+                                          community,
+                                          user.uid,
+                                        );
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'You have joined ${community.name}'),
+                                          ),
+                                        );
+                                      } else {
+                                        Get.to(
+                                          () => JoinCommunityVerificationScreen(
+                                            community: community,
+                                          ),
+                                        );
+                                      }
                                     }
                                   },
                                   style: OutlinedButton.styleFrom(

@@ -361,6 +361,26 @@ class CommunityController extends GetxController {
     );
   }
 
+  Future<void> leaveCommunity(Community community, String uid) async {
+    try {
+      final updatedMembers = List<String>.from(community.members)..remove(uid);
+
+      await FirebaseFirestore.instance
+          .collection('communities')
+          .doc(community.id)
+          .update({
+        'members': updatedMembers,
+      });
+
+      // Optional: update local model if held in memory
+      community.members.remove(uid);
+      update();
+    } catch (e) {
+      print('Error leaving community: $e');
+      showSnackBar(Get.context!, 'Failed to leave community');
+    }
+  }
+
   /// Get posts for a community.
   Stream<List<Post>> getCommunityPosts(String communityId) {
     print('[DEBUG] Fetching posts for communityId: $communityId'); // ✅ Add this
