@@ -8,13 +8,15 @@ import '../controller/post_controller.dart';
 import '../widgets/dot_indicator.dart';
 import '../widgets/neo_button.dart';
 
-/// Displays full-screen carousel images with voting and tagged users for 'carousel' posts.
 class FullScreenImagePage extends StatefulWidget {
   final Post post;
   final int initialPage;
 
-  const FullScreenImagePage(
-      {super.key, required this.post, this.initialPage = 0});
+  const FullScreenImagePage({
+    super.key,
+    required this.post,
+    this.initialPage = 0,
+  });
 
   @override
   _FullScreenImagePageState createState() => _FullScreenImagePageState();
@@ -37,9 +39,8 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
     final user = Get.find<AuthController>().userModel.value!;
     _alreadyVoted = widget.post.userVotes.containsKey(user.uid);
 
-    if (widget.post.taggedUsers.isNotEmpty) {
-      _fetchUsernames(widget.post.taggedUsers);
-    }
+    // fetch usernames for all UIDs
+    _fetchUsernames(widget.post.taggedUids);
   }
 
   Future<void> _fetchUsernames(List<String> ids) async {
@@ -53,6 +54,22 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
     setState(() {});
   }
 
+  List<List<String>> getGroupedTags() {
+    final totalImages = widget.post.imageUrls.length;
+    final flatTags = widget.post.taggedUsers;
+    final grouped = <List<String>>[];
+
+    for (int i = 0; i < totalImages; i++) {
+      if (i < flatTags.length) {
+        grouped.add([flatTags[i]]);
+      } else {
+        grouped.add([]);
+      }
+    }
+
+    return grouped;
+  }
+
   void _vote() {
     if (_alreadyVoted) return;
 
@@ -62,22 +79,14 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
       return;
     }
 
-    final taggedUsers = widget.post.taggedUsers;
-    final grouped = List.generate(
-      widget.post.imageUrls.length,
-      (i) => taggedUsers
-          .asMap()
-          .entries
-          .where((e) => e.key % widget.post.imageUrls.length == i)
-          .map((e) => e.value)
-          .toList(),
-    );
-
+    final groupedTaggedUsers = getGroupedTags();
     String taggedName = "Candidate";
-    final list = grouped[_currentPage];
-    if (list.isNotEmpty) {
-      final uid = list.first;
-      taggedName = userNames[uid] ?? "Loading...";
+
+    final tagsForCurrentImage = groupedTaggedUsers[_currentPage];
+    if (tagsForCurrentImage.isNotEmpty) {
+      final tag = tagsForCurrentImage.first;
+      final isManual = widget.post.taggedNames.contains(tag);
+      taggedName = isManual ? tag : userNames[tag] ?? "Loading...";
     }
 
     showDialog(
@@ -93,8 +102,10 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              Get.find<PostController>()
-                  .voteForCandidate(widget.post.id, _currentPage);
+              Get.find<PostController>().voteForCandidate(
+                widget.post.id,
+                _currentPage,
+              );
               setState(() => _alreadyVoted = true);
             },
             child: const Text("Vote"),
@@ -111,16 +122,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
   @override
   Widget build(BuildContext context) {
     final images = widget.post.imageUrls;
-
-    final groupedTaggedUsers = List.generate(
-      images.length,
-      (i) => widget.post.taggedUsers
-          .asMap()
-          .entries
-          .where((e) => e.key % images.length == i)
-          .map((e) => e.value)
-          .toList(),
-    );
+    final groupedTaggedUsers = getGroupedTags();
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -160,13 +162,19 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
             if (_showTags && groupedTaggedUsers[_currentPage].isNotEmpty)
               ...groupedTaggedUsers[_currentPage].asMap().entries.map((entry) {
                 final idx = entry.key;
-                final uid = entry.value;
-                final name = userNames[uid] ?? 'Loading...';
+                final tag = entry.value;
+                final isManual = widget.post.taggedNames.contains(tag);
+                final name = isManual ? tag : userNames[tag] ?? 'Loading...';
+
                 return Positioned(
                   left: 16,
                   bottom: 80 + idx * 28,
                   child: GestureDetector(
-                    onTap: () => _navigateToTaggedUserProfile(uid),
+                    onTap: () {
+                      if (!isManual) {
+                        _navigateToTaggedUserProfile(tag);
+                      }
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           vertical: 4, horizontal: 8),
@@ -174,9 +182,13 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                         color: Colors.black.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text('Tagged: $name',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 14)),
+                      child: Text(
+                        'Tagged: $name',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
                     ),
                   ),
                 );

@@ -20,6 +20,8 @@ class Post {
   final int likes;
   final List<String> likedBy;
   final DateTime? electionEndTime;
+  final List<String> taggedNames;
+  final List<String> taggedUids;
 
   Post({
     required this.id,
@@ -37,6 +39,8 @@ class Post {
     List<String>? imageUrls,
     Map<String, int>? userVotes,
     List<String>? taggedUsers,
+    List<String>? taggedNames,
+    List<String>? taggedUids,
     Map<String, int>? imageVotes,
     int? likes,
     List<String>? likedBy,
@@ -44,6 +48,8 @@ class Post {
   })  : imageUrls = imageUrls ?? [],
         userVotes = userVotes ?? {},
         taggedUsers = taggedUsers ?? [],
+        taggedNames = taggedNames ?? [],
+        taggedUids = taggedUids ?? [],
         imageVotes = imageVotes ?? {},
         likes = likes ?? 0,
         likedBy = likedBy ?? [];
@@ -62,6 +68,8 @@ class Post {
     String? type,
     DateTime? createdAt,
     List<String>? imageUrls,
+    List<String>? taggedNames,
+    List<String>? taggedUids,
     Map<String, int>? userVotes,
     List<String>? taggedUsers,
     Map<String, int>? imageVotes,
@@ -89,6 +97,8 @@ class Post {
       likes: likes ?? this.likes,
       likedBy: likedBy ?? this.likedBy,
       electionEndTime: electionEndTime ?? this.electionEndTime,
+      taggedNames: taggedNames ?? this.taggedNames,
+      taggedUids: taggedUids ?? this.taggedUids,
     );
   }
 
@@ -113,6 +123,8 @@ class Post {
       'likes': likes,
       'likedBy': likedBy,
       'electionEndTime': electionEndTime?.millisecondsSinceEpoch,
+      'taggedNames': taggedNames,
+      'taggedUids': taggedUids,
     };
   }
 
@@ -140,6 +152,8 @@ class Post {
       imageVotes: Map<String, int>.from(map['imageVotes'] ?? {}),
       likes: map['likes'] as int? ?? 0,
       likedBy: List<String>.from(map['likedBy'] ?? []),
+      taggedNames: List<String>.from(map['taggedNames'] ?? []),
+      taggedUids: List<String>.from(map['taggedUids'] ?? []),
       electionEndTime: map['electionEndTime'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['electionEndTime'] as int)
           : null,

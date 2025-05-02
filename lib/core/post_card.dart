@@ -77,8 +77,8 @@ class _PostCardState extends State<PostCard>
     isLiked = widget.post.likedBy.contains(currentUser.uid);
     likeCount = widget.post.likes;
     // Assuming widget.post.taggedUsers is a flat List<String>
-    if (widget.post.taggedUsers.isNotEmpty) {
-      fetchUsernames(widget.post.taggedUsers);
+    if (widget.post.taggedUids.isNotEmpty) {
+      fetchUsernames(widget.post.taggedUids);
     }
   }
 
@@ -101,8 +101,8 @@ class _PostCardState extends State<PostCard>
     }
   }
 
-  Future<void> fetchUsernames(List<String> userIds) async {
-    for (String userId in userIds) {
+  Future<void> fetchUsernames(List<String> uids) async {
+    for (String userId in uids) {
       if (!_cachedUsernames.containsKey(userId)) {
         final username =
             await Get.find<AuthController>().getUsernameFromUid(userId);
@@ -461,12 +461,19 @@ class _PostCardState extends State<PostCard>
                                                                 .map((entry) {
                                                               final tagIdx =
                                                                   entry.key;
-                                                              final userId =
+                                                              final tag =
                                                                   entry.value;
-                                                              final username =
-                                                                  userNames[
-                                                                          userId] ??
-                                                                      'Loading…';
+                                                              final isManual =
+                                                                  widget.post
+                                                                      .taggedNames
+                                                                      .contains(
+                                                                          tag);
+                                                              final displayName = isManual
+                                                                  ? tag
+                                                                  : userNames[
+                                                                          tag] ??
+                                                                      'Loading...';
+
                                                               return Positioned(
                                                                 left: 10,
                                                                 bottom: 10 +
@@ -474,9 +481,12 @@ class _PostCardState extends State<PostCard>
                                                                         20.0,
                                                                 child:
                                                                     GestureDetector(
-                                                                  onTap: () =>
+                                                                  onTap: () {
+                                                                    if (!isManual) {
                                                                       navigateToTaggedUserProfile(
-                                                                          userId),
+                                                                          tag);
+                                                                    }
+                                                                  },
                                                                   child:
                                                                       Container(
                                                                     padding:
@@ -494,12 +504,16 @@ class _PostCardState extends State<PostCard>
                                                                               4),
                                                                     ),
                                                                     child: Text(
-                                                                      'Tagged: $username',
-                                                                      style: const TextStyle(
-                                                                          color: Colors
-                                                                              .white,
-                                                                          fontSize:
-                                                                              12),
+                                                                      'Tagged: $displayName',
+                                                                      style:
+                                                                          const TextStyle(
+                                                                        color: Colors
+                                                                            .white,
+                                                                        fontSize:
+                                                                            12,
+                                                                        fontWeight:
+                                                                            FontWeight.w500,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
@@ -544,12 +558,26 @@ class _PostCardState extends State<PostCard>
                                                                   final taggedList =
                                                                       groupedTaggedUsers[
                                                                           index];
-                                                                  final taggedName = taggedList
-                                                                          .isNotEmpty
-                                                                      ? userNames[
-                                                                              taggedList.first] ??
-                                                                          'Loading…'
-                                                                      : 'Candidate';
+                                                                  String
+                                                                      taggedName =
+                                                                      'Candidate';
+
+                                                                  if (taggedList
+                                                                      .isNotEmpty) {
+                                                                    final tag =
+                                                                        taggedList
+                                                                            .first;
+                                                                    final isManual = widget
+                                                                        .post
+                                                                        .taggedNames
+                                                                        .contains(
+                                                                            tag);
+                                                                    taggedName = isManual
+                                                                        ? tag
+                                                                        : userNames[tag] ??
+                                                                            'Loading…';
+                                                                  }
+
                                                                   showDialog(
                                                                     context:
                                                                         context,

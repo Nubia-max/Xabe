@@ -147,7 +147,7 @@ class PostController extends GetxController {
     required String caption,
     required Community selectedCommunity,
     required List<dynamic> files,
-    required List<List<String>> taggedUsers,
+    required List<List<Map<String, dynamic>>> taggedUsers, // updated type
     bool isCarousel2 = false,
     DateTime? electionEndTime,
   }) async {
@@ -172,8 +172,8 @@ class PostController extends GetxController {
 
     final postId = const Uuid().v1();
     final imageUrls = <String>[];
-    final flatTaggedUsers = taggedUsers.expand((list) => list).toList();
 
+    // Upload images
     final uploadFutures = <Future<Either<Failure, String>>>[];
 
     for (int i = 0; i < files.length; i++) {
@@ -215,6 +215,24 @@ class PostController extends GetxController {
       );
     }
 
+    // Separate manual names and UIDs
+    final List<String> taggedNames = [];
+    final List<String> taggedUids = [];
+    final List<String> flatRawTags = [];
+
+    for (var list in taggedUsers) {
+      for (var tag in list) {
+        if (tag['isManual'] == true && tag.containsKey('name')) {
+          taggedNames.add(tag['name']);
+          flatRawTags.add(tag['name']);
+        } else if (tag.containsKey('uid')) {
+          taggedUids.add(tag['uid']);
+          flatRawTags.add(tag['uid']);
+        }
+      }
+    }
+
+    // Construct Post model
     final post = Post(
       id: postId,
       title: title,
@@ -226,7 +244,7 @@ class PostController extends GetxController {
       type: isCarousel2 ? 'carousel2' : 'carousel',
       createdAt: DateTime.now(),
       imageUrls: imageUrls,
-      taggedUsers: flatTaggedUsers,
+      taggedUsers: flatRawTags, // for backward compatibility
       description: caption,
       electionEndTime: isCarousel2 ? null : electionEndTime!,
       likedBy: [],
@@ -234,6 +252,8 @@ class PostController extends GetxController {
       imageVotes: {},
       link: '',
       communityId: selectedCommunity.id,
+      taggedNames: taggedNames,
+      taggedUids: taggedUids,
     );
 
     final res = await _postRepository.addPost(post);
@@ -244,6 +264,7 @@ class PostController extends GetxController {
       (_) {
         showSnackBar(context, 'Posted Successfully!');
         Get.back();
+
         for (final member in selectedCommunity.members) {
           if (member != user.uid) {
             Get.find<NotificationController>().sendNotification(

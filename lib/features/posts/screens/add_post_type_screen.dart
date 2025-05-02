@@ -118,6 +118,51 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                         },
                       ),
                       const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Text("Or manually tag:"),
+                          const SizedBox(width: 10),
+                          IconButton(
+                            icon: const Icon(Icons.edit),
+                            tooltip: 'Enter custom name',
+                            onPressed: () async {
+                              final manualName = await showDialog<String>(
+                                context: context,
+                                builder: (context) {
+                                  final controller = TextEditingController();
+                                  return AlertDialog(
+                                    title: const Text('Enter Name to Tag'),
+                                    content: TextField(
+                                      controller: controller,
+                                      maxLength: 15,
+                                      decoration: const InputDecoration(
+                                        hintText: 'Enter name',
+                                        counterText: '',
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(
+                                            context, controller.text.trim()),
+                                        child: const Text('Tag'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+
+                              if (manualName != null && manualName.isNotEmpty) {
+                                Navigator.of(context).pop([manualName]);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
                       SizedBox(
                         height: 300,
                         width: double.maxFinite,
@@ -160,11 +205,16 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
       for (var uid in selectedUsers) {
         if (!taggedUsernames.containsKey(uid)) {
-          final username =
-              await Get.find<AuthController>().getUsernameFromUid(uid);
-          setState(() {
-            taggedUsernames[uid] = username;
-          });
+          if (uid.length < 15) {
+            // assume it's a manual name, skip lookup
+            taggedUsernames[uid] = uid;
+          } else {
+            final username =
+                await Get.find<AuthController>().getUsernameFromUid(uid);
+            setState(() {
+              taggedUsernames[uid] = username;
+            });
+          }
         }
       }
     }
@@ -235,15 +285,27 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
   }
 
   void sharePost() {
-    // Prevent multiple clicks on the share button by disabling it during sharing
     if (isSharing) return;
 
     setState(() {
-      isSharing = true; // Disable the button when the post is being shared
+      isSharing = true;
     });
 
     final captionText = captionController.text.trim();
     final postController = Get.find<PostController>();
+
+    // Transform tags before sending
+    final transformedTags = taggedUsers.map((list) {
+      return list.map((tag) {
+        final isManual =
+            tag.length < 15 || !RegExp(r'^[a-zA-Z0-9]+$').hasMatch(tag);
+        return {
+          if (isManual) 'name': tag else 'uid': tag,
+          'isManual': isManual,
+        };
+      }).toList();
+    }).toList();
+
     if (widget.type == 'image' &&
         bannerFile != null &&
         titleController.text.isNotEmpty) {
@@ -257,7 +319,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       )
           .then((_) {
         setState(() {
-          isSharing = false; // Re-enable the button after post sharing
+          isSharing = false;
         });
       });
     } else if (widget.type == 'carousel' &&
@@ -266,7 +328,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       if (electionEndTime == null) {
         showSnackBar(context, "Please select an election end time.");
         setState(() {
-          isSharing = false; // Re-enable the button
+          isSharing = false;
         });
         return;
       }
@@ -275,23 +337,24 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
               taggedUsers.any((tags) => tags.isEmpty))) {
         showSnackBar(context, "Please tag all the pictures before posting.");
         setState(() {
-          isSharing = false; // Re-enable the button
+          isSharing = false;
         });
         return;
       }
+
       postController
           .shareCarouselPost(
         context: context,
         title: titleController.text.trim(),
         selectedCommunity: selectedCommunity ?? communities[0],
         files: carouselImages,
-        taggedUsers: taggedUsers,
-        caption: captionController.text.trim(),
+        taggedUsers: transformedTags, // ✅ updated format
+        caption: captionText,
         electionEndTime: electionEndTime,
       )
           .then((_) {
         setState(() {
-          isSharing = false; // Re-enable the button after post sharing
+          isSharing = false;
         });
       });
     } else if (widget.type == 'carousel2' &&
@@ -303,19 +366,19 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         title: titleController.text.trim(),
         selectedCommunity: selectedCommunity ?? communities[0],
         files: carouselImages,
-        taggedUsers: <List<String>>[],
+        taggedUsers: <List<Map<String, dynamic>>>[], // ✅ adjusted type
         isCarousel2: true,
         caption: captionText,
       )
           .then((_) {
         setState(() {
-          isSharing = false; // Re-enable the button after post sharing
+          isSharing = false;
         });
       });
     } else {
       showSnackBar(context, "Please enter all the fields");
       setState(() {
-        isSharing = false; // Re-enable the button
+        isSharing = false;
       });
     }
   }

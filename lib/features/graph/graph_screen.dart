@@ -32,20 +32,27 @@ class _GraphScreenState extends State<GraphScreen> {
 
   Future<void> fetchTaggedUsernames() async {
     final post = await _postFuture;
-    List<String> names = [];
-    // For each image in the post, get the tagged user's username.
+    final List<String> result = [];
+
     for (int i = 0; i < post.imageUrls.length; i++) {
       if (i < post.taggedUsers.length) {
-        final uid = post.taggedUsers[i];
-        final username = await authController.getUsernameFromUid(uid);
-        names.add(username);
+        final tag = post.taggedUsers[i];
+
+        final isManual = post.taggedNames.contains(tag);
+        if (isManual) {
+          result.add(tag);
+        } else {
+          final username = await authController.getUsernameFromUid(tag);
+          result.add(username);
+        }
       } else {
-        names.add("N/A");
+        result.add("N/A");
       }
     }
+
     if (!mounted) return;
     setState(() {
-      taggedUsernames = names;
+      taggedUsernames = result;
       isLoading = false;
     });
   }
