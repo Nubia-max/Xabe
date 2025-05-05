@@ -82,5 +82,21 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>CFBundleURLTypes</key>
+        <array>
+          <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+              <string>com.googleusercontent.apps.428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu</string>
+              <string>com.nubiarabo.rogueFashion</string>
+            </array>
+          </dict>
+        </array>
+
+        <key>SignInWithApple</key>
+        <true/>
+
 	</dict>
 </plist>

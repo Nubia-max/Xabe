@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:get/get.dart';
 import 'package:xabe/features/auth/repository/auth_repository.dart';
@@ -24,17 +25,18 @@ class AuthController extends GetxController {
     super.onInit();
     // Listen to Firebase auth state changes.
     _authRepository.authStateChange.listen((User? firebaseUser) {
-      if (firebaseUser == null) {
-        // If the user signs out, navigate to the login screen.
-        Get.offAllNamed('/login');
-      } else {
-        // When a user is present, listen to user data stream.
-        _authRepository.getUserData(firebaseUser.uid).listen((UserModel user) {
-          userModel.value = user;
-          // Navigate to the home screen.
-          Get.offAllNamed('/');
-        });
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (firebaseUser == null) {
+          Get.offAllNamed('/login');
+        } else {
+          _authRepository
+              .getUserData(firebaseUser.uid)
+              .listen((UserModel user) {
+            userModel.value = user;
+            Get.offAllNamed('/');
+          });
+        }
+      });
     });
   }
 
@@ -55,6 +57,25 @@ class AuthController extends GetxController {
         },
         (user) {
           userModel.value = user as UserModel?;
+        },
+      );
+    } catch (e) {
+      isLoading.value = false;
+      Get.snackbar("Error", e.toString());
+    }
+  }
+
+  Future<void> signInWithApple(bool isFromLogin) async {
+    try {
+      isLoading.value = true;
+      final result = await _authRepository.signInWithApple(isFromLogin);
+      isLoading.value = false;
+      result.fold(
+        (failure) {
+          Get.snackbar("Sign In Error", failure.message);
+        },
+        (user) {
+          userModel.value = user;
         },
       );
     } catch (e) {

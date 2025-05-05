@@ -45,7 +45,9 @@ class AppleSignInButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ElevatedButton.icon(
-      onPressed: () {},
+      onPressed: () {
+        Get.find<AuthController>().signInWithApple(isFromLogin);
+      },
       icon: Image.asset(
         Constants.applePath,
         width: 26,

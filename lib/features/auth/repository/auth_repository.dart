@@ -1,9 +1,14 @@
 // repositories/auth_repository.dart
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:xabe/core/constants/constants.dart';
 import 'package:xabe/core/constants/firebase_constants.dart';
 import 'package:xabe/core/failure.dart';
@@ -112,6 +117,72 @@ class AuthRepository {
   Future<void> logOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
+  }
+
+  FutureEither<UserModel> signInWithApple(bool isFromLogin) async {
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider("apple.com").credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+        rawNonce: rawNonce,
+      );
+
+      UserCredential userCredential;
+      if (isFromLogin) {
+        userCredential = await _auth.signInWithCredential(oauthCredential);
+      } else {
+        userCredential =
+            await _auth.currentUser!.linkWithCredential(oauthCredential);
+      }
+
+      UserModel userModel;
+      if (userCredential.additionalUserInfo!.isNewUser) {
+        final displayName = appleCredential.givenName ?? "No Name";
+        userModel = UserModel(
+          name: displayName,
+          profilePic: Constants.avatarDefault,
+          uid: userCredential.user!.uid,
+          isAuthenticated: true,
+          bio: '',
+        );
+        await _users.doc(userModel.uid).set(userModel.toMap());
+      } else {
+        final doc = await _users.doc(userCredential.user!.uid).get();
+        if (!doc.exists) return left(Failure('User data not found'));
+        userModel = UserModel.fromMap(doc.data() as Map<String, dynamic>);
+      }
+
+      return right(userModel);
+    } on FirebaseAuthException catch (e) {
+      return left(Failure(e.message ?? 'Apple sign-in failed.'));
+    } catch (e) {
+      return left(Failure(e.toString()));
+    }
+  }
+
+  String _generateNonce([int length = 32]) {
+    final charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
+  }
+
+  String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
   }
 
   /// Deletes the currently signed-in user and their Firestore profile.
