@@ -97,7 +97,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
           // 4) Document exists: build your Community object
           // RIGHT: pass only the map
-          final data = docSnap.data()! as Map<String, dynamic>;
+          final data = docSnap.data()!;
           final community = Community.fromMap(
               data); // :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
 

@@ -1,102 +1,106 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-	<dict>
-		<key>GIDClientID</key>
-		<!-- TODO Replace this value: -->
-		<!-- Copied from GoogleService-Info.plist key CLIENT_ID -->
-		<string>[428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu.apps.googleusercontent.com]</string>
-		<!-- Put me in the [my_project]/ios/Runner/Info.plist file -->
-		<!-- Google Sign-in Section -->
-		<key>CFBundleURLTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleTypeRole</key>
-				<string>Editor</string>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<!-- TODO Replace this value: -->
-					<!-- Copied from GoogleService-Info.plist key REVERSED_CLIENT_ID -->
-					<string>com.googleusercontent.apps.428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu</string>
-				</array>
-			</dict>
-		</array>
-		<!-- End of the Google Sign-in Section -->
-		<key>CFBundleGetInfoString</key>
-		<string></string>
-		<key>LSApplicationCategoryType</key>
-		<string></string>
-		<key>CFBundleDevelopmentRegion</key>
-		<string>$(DEVELOPMENT_LANGUAGE)</string>
-		<key>CFBundleDisplayName</key>
-		<string>Xabe</string>
-		<key>CFBundleExecutable</key>
-		<string>$(EXECUTABLE_NAME)</string>
-		<key>CFBundleIdentifier</key>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-		<key>CFBundleInfoDictionaryVersion</key>
-		<string>6.0</string>
-		<key>CFBundleName</key>
-		<string>Xabe</string>
-		<key>CFBundlePackageType</key>
-		<string>APPL</string>
-		<key>CFBundleShortVersionString</key>
-		<string>$(FLUTTER_BUILD_NAME)</string>
-		<key>CFBundleSignature</key>
-		<string>????</string>
-		<key>CFBundleVersion</key>
-		<string>$(FLUTTER_BUILD_NUMBER)</string>
-		<key>LSRequiresIPhoneOS</key>
-		<true/>
-		<key>UILaunchStoryboardName</key>
-		<string>LaunchScreen</string>
-		<key>UIMainStoryboardFile</key>
-		<string>Main</string>
-		<key>UISupportedInterfaceOrientations</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>UISupportedInterfaceOrientations~ipad</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>CADisableMinimumFrameDurationOnPhone</key>
-		<true/>
-		<key>UIApplicationSupportsIndirectInputEvents</key>
-		<true/>
-		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Explain why your app uses photo library</string>
-		<key>GADApplicationIdentifier</key>
-		<string>ca-app-pub-8352296755977335~6184022554</string>
-		<key>SKAdNetworkAppID</key>
-		<array>
-			<dict>
-				<key>SKADNetworkIdentifier</key>
-				<string>cstr6suwn9.skadnetwork</string>
-			</dict>
-		</array>
-		<key>UIStatusBarHidden</key>
-		<false/>
-		<key>CFBundleURLTypes</key>
+  <dict>
+    <!-- Google Sign-In -->
+    <key>GIDClientID</key>
+    <string>428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu.apps.googleusercontent.com</string>
+
+    <!-- URL Schemes (Google Sign-In + Custom) -->
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
         <array>
-          <dict>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-              <string>com.googleusercontent.apps.428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu</string>
-              <string>com.nubiarabo.rogueFashion</string>
-            </array>
-          </dict>
+          <!-- Reversed Google Client ID -->
+          <string>com.googleusercontent.apps.428700861857-hu540ci7jn3lgsbsghc7fial07n2ffsu</string>
+          <!-- Your app’s custom scheme -->
+          <string>com.nubiarabo.rogueFashion</string>
         </array>
+      </dict>
+    </array>
 
-        <key>SignInWithApple</key>
-        <true/>
+    <!-- App Information -->
+    <key>CFBundleDisplayName</key>
+    <string>Xabe</string>
+    <key>CFBundleName</key>
+    <string>Xabe</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleVersion</key>
+    <string>$(FLUTTER_BUILD_NUMBER)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(FLUTTER_BUILD_NAME)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleGetInfoString</key>
+    <string></string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string></string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
 
-	</dict>
+    <!-- Launch & Storyboards -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UIMainStoryboardFile</key>
+    <string>Main</string>
+
+    <!-- Supported Orientations -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationLandscapeLeft</string>
+      <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+      <string>UIInterfaceOrientationLandscapeLeft</string>
+      <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+
+    <!-- Status Bar -->
+    <key>UIStatusBarHidden</key>
+    <false/>
+
+    <!-- Performance Hints -->
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
+
+    <!-- Photo Library Usage -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app requires access to your photo library to let you select and upload images for your posts.</string>
+
+    <!-- Sign in with Apple -->
+    <key>SignInWithApple</key>
+    <true/>
+
+    <!-- AdMob App ID -->
+    <key>GADApplicationIdentifier</key>
+    <string>ca-app-pub-8352296755977335~8234275284</string>
+
+    <!-- SKAdNetwork Registration -->
+    <key>SKAdNetworkItems</key>
+    <array>
+      <dict>
+        <key>SKAdNetworkIdentifier</key>
+        <string>cstr6suwn9.skadnetwork</string>
+      </dict>
+      <!-- Add additional SKAdNetworkIdentifier entries here if needed -->
+    </array>
+  </dict>
 </plist>

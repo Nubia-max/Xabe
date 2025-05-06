@@ -15,9 +15,9 @@ class ModToolsScreen extends StatelessWidget {
   );
 
   ModToolsScreen({
-    Key? key,
+    super.key,
     required this.community,
-  }) : super(key: key);
+  });
 
   void _navigateToEditCommunity() {
     Get.toNamed('/edit-community/${Uri.encodeComponent(community.id)}');

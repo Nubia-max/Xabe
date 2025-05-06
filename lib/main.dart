@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,8 +26,19 @@ import 'package:url_strategy/url_strategy.dart';
 import 'router.dart';
 import 'firebase_options.dart';
 
+// Real Ad Unit IDs
+const String _androidBannerAdUnitId = 'ca-app-pub-8352296755977335/6184022554';
+const String _iosBannerAdUnitId = 'ca-app-pub-8352296755977335/3919625753';
+
+String get bannerAdUnitId {
+  if (Platform.isAndroid) return _androidBannerAdUnitId;
+  if (Platform.isIOS) return _iosBannerAdUnitId;
+  throw UnsupportedError('Unsupported platform for ads');
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Initialize Google Mobile Ads SDK
   MobileAds.instance.initialize();
 
   NotiService().initNotification();
@@ -84,13 +96,7 @@ Future<void> main() async {
     notiService: notiService,
   ));
 
-  Get.put<CommunityController>(
-    CommunityController(
-      communityRepository: CommunityRepository(firestore: firestore),
-      storageRepository: storageRepository,
-    ),
-  );
-
+  // Duplicate CommunityController removed since already added above
   Get.put<ThemeController>(ThemeController());
 
   setPathUrlStrategy();
@@ -100,6 +106,7 @@ Future<void> main() async {
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -113,7 +120,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _bannerAd = BannerAd(
       size: AdSize.banner,
-      adUnitId: 'ca-app-pub-3940256099942544/9214589741',
+      adUnitId: bannerAdUnitId,
       listener: BannerAdListener(
         onAdLoaded: (_) => setState(() => _isAdLoaded = true),
         onAdFailedToLoad: (ad, err) {

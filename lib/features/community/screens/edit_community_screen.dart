@@ -109,8 +109,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
         if (communityNameController.text.isEmpty) {
           communityNameController.text = community.name;
         }
-        if (requiresVerification == null)
-          requiresVerification = community.requiresVerification;
+        requiresVerification ??= community.requiresVerification;
 
         return Scaffold(
           appBar: AppBar(
