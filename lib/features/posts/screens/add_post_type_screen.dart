@@ -48,6 +48,11 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
     super.dispose();
   }
 
+  bool _looksLikeUid(String s) {
+    // Firebase UIDs are typically 28 alphanumeric chars:
+    return RegExp(r'^[A-Za-z0-9]{28}$').hasMatch(s);
+  }
+
   void tagUsers(int imageIndex) async {
     if (selectedCommunity == null) {
       showSnackBar(context, "Please select community first");
@@ -134,7 +139,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                                     title: const Text('Enter Name to Tag'),
                                     content: TextField(
                                       controller: controller,
-                                      maxLength: 15,
+                                      maxLength: 25,
                                       decoration: const InputDecoration(
                                         hintText: 'Enter name',
                                         counterText: '',
@@ -205,9 +210,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
       for (var uid in selectedUsers) {
         if (!taggedUsernames.containsKey(uid)) {
-          if (uid.length < 15) {
-            // assume it's a manual name, skip lookup
-            taggedUsernames[uid] = uid;
+          if (!_looksLikeUid(uid)) {
+            setState(() {
+              taggedUsernames[uid] = uid; // manual tag
+            });
           } else {
             final username =
                 await Get.find<AuthController>().getUsernameFromUid(uid);
@@ -298,7 +304,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
     final transformedTags = taggedUsers.map((list) {
       return list.map((tag) {
         final isManual =
-            tag.length < 15 || !RegExp(r'^[a-zA-Z0-9]+$').hasMatch(tag);
+            tag.length < 25 || !RegExp(r'^[A-Za-z0-9]{28}$').hasMatch(tag);
         return {
           if (isManual) 'name': tag else 'uid': tag,
           'isManual': isManual,
