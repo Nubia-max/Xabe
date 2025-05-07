@@ -1,13 +1,18 @@
-import 'dart:io' show Platform;
-import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:url_strategy/url_strategy.dart';
+
+import 'router.dart';
+import 'firebase_options.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 import 'package:xabe/features/auth/repository/auth_repository.dart';
 import 'package:xabe/features/community/controller/community_controller.dart';
@@ -22,53 +27,63 @@ import 'package:xabe/features/user_profile/controller/user_profile_controller.da
 import 'package:xabe/features/user_profile/repository/user_profile_repository.dart';
 import 'package:xabe/features/notifications/notification_controller.dart';
 import 'package:xabe/features/notifications/notification_repository.dart';
-import 'package:url_strategy/url_strategy.dart';
-import 'router.dart';
-import 'firebase_options.dart';
 
 // Real Ad Unit IDs
 const String _androidBannerAdUnitId = 'ca-app-pub-8352296755977335/6184022554';
 const String _iosBannerAdUnitId = 'ca-app-pub-8352296755977335/3919625753';
 
 String get bannerAdUnitId {
-  if (Platform.isAndroid) return _androidBannerAdUnitId;
-  if (Platform.isIOS) return _iosBannerAdUnitId;
-  throw UnsupportedError('Unsupported platform for ads');
+  if (kIsWeb) {
+    throw UnsupportedError('Ads are not supported on web');
+  }
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+      return _androidBannerAdUnitId;
+    case TargetPlatform.iOS:
+      return _iosBannerAdUnitId;
+    default:
+      throw UnsupportedError('Unsupported platform for ads');
+  }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize Google Mobile Ads SDK
-  MobileAds.instance.initialize();
 
+  // Initialize Google Mobile Ads SDK only for mobile platforms (Android/iOS)
+  if (!kIsWeb) {
+    await MobileAds.instance.initialize();
+  }
+
+  // Initialize notifications
   NotiService().initNotification();
 
+  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Activate AppCheck only on mobile platforms
+  if (!kIsWeb) {
+    await FirebaseAppCheck.instance.activate(
+      appleProvider: AppleProvider.deviceCheck,
+    );
+  }
 
-  await FirebaseAppCheck.instance.activate(
-    appleProvider:
-        AppleProvider.deviceCheck, // or .appAttest if you've configured it
-  );
-
+  // Dependency injection
   final firestore = FirebaseFirestore.instance;
   final firebaseAuth = FirebaseAuth.instance;
   final googleSignIn = GoogleSignIn();
   final firebaseStorage = FirebaseStorage.instance;
 
-  final notiService = NotiService();
-  Get.put<NotiService>(notiService);
-
   Get.put<FirebaseFirestore>(firestore);
   Get.put<FirebaseStorage>(firebaseStorage);
 
+  // Auth
   Get.put<AuthRepository>(AuthRepository(
     firestore: firestore,
     auth: firebaseAuth,
     googleSignIn: googleSignIn,
   ));
-  Get.put<AuthController>(
-      AuthController(authRepository: Get.find<AuthRepository>()));
+  Get.put<AuthController>(AuthController(authRepository: Get.find()));
 
+  // Community
   final communityRepository = CommunityRepository(firestore: firestore);
   final storageRepository = StorageRepository(firebaseStorage: firebaseStorage);
   Get.put<CommunityController>(CommunityController(
@@ -76,65 +91,75 @@ Future<void> main() async {
     storageRepository: storageRepository,
   ));
 
+  // User Profile
   final userProfileRepository = UserProfileRepository(firestore: firestore);
   Get.put<UserProfileController>(UserProfileController(
     storageRepository: storageRepository,
     userProfileRepository: userProfileRepository,
   ));
 
+  // Posts
   final postRepository = PostRepository(firestore: firestore);
-  Get.put<PostRepository>(postRepository);
   Get.put<PostController>(PostController(
     postRepository: postRepository,
     storageRepository: storageRepository,
   ));
 
+  // Notifications repo & controller
   final notificationRepository = NotificationRepository(firestore: firestore);
+  final notiService = NotiService();
   Get.put<NotificationRepository>(notificationRepository);
   Get.put<NotificationController>(NotificationController(
     notificationRepository: notificationRepository,
     notiService: notiService,
   ));
 
-  // Duplicate CommunityController removed since already added above
+  // Theme
   Get.put<ThemeController>(ThemeController());
 
+  // URL strategy for web
   setPathUrlStrategy();
 
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  late BannerAd _bannerAd;
+  late final BannerAd _bannerAd;
   bool _isAdLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _bannerAd = BannerAd(
-      size: AdSize.banner,
-      adUnitId: bannerAdUnitId,
-      listener: BannerAdListener(
-        onAdLoaded: (_) => setState(() => _isAdLoaded = true),
-        onAdFailedToLoad: (ad, err) {
-          ad.dispose();
-          debugPrint('Ad failed to load: $err');
-        },
-      ),
-      request: const AdRequest(),
-    )..load();
+    // Initialize banner ads only for mobile platforms
+    if (!kIsWeb) {
+      _bannerAd = BannerAd(
+        size: AdSize.banner,
+        adUnitId: bannerAdUnitId,
+        listener: BannerAdListener(
+          onAdLoaded: (_) => setState(() => _isAdLoaded = true),
+          onAdFailedToLoad: (ad, err) {
+            ad.dispose();
+            debugPrint('Ad failed to load: $err');
+          },
+        ),
+        request: const AdRequest(),
+      )..load();
+    }
   }
 
   @override
   void dispose() {
-    _bannerAd.dispose();
+    // Dispose of the banner ad only for mobile platforms
+    if (!kIsWeb) {
+      _bannerAd.dispose();
+    }
     super.dispose();
   }
 
@@ -151,18 +176,16 @@ class _MyAppState extends State<MyApp> {
         themeMode: themeController.mode.value,
         initialRoute: '/login',
         getPages: appRoutes,
-        builder: (context, child) {
-          return Scaffold(
-            body: child,
-            bottomNavigationBar: _isAdLoaded
-                ? SizedBox(
-                    height: _bannerAd.size.height.toDouble(),
-                    width: _bannerAd.size.width.toDouble(),
-                    child: AdWidget(ad: _bannerAd),
-                  )
-                : null,
-          );
-        },
+        builder: (context, child) => Scaffold(
+          body: child,
+          bottomNavigationBar: (!kIsWeb && _isAdLoaded)
+              ? SizedBox(
+                  height: _bannerAd.size.height.toDouble(),
+                  width: _bannerAd.size.width.toDouble(),
+                  child: AdWidget(ad: _bannerAd),
+                )
+              : null,
+        ),
       );
     });
   }
