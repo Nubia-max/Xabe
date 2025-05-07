@@ -560,6 +560,12 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    ElevatedButton.icon(
+                      onPressed: pickImages,
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text("Pick Candidates"),
+                    ),
+                    const SizedBox(height: 10),
                     carouselImages.isNotEmpty
                         ? SizedBox(
                             height: 150,
