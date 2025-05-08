@@ -5,10 +5,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:xabe/core/utils.dart';
 import 'package:xabe/models/community_model.dart';
-
 import '../../../core/common/loader.dart';
+import '../../../core/utils/simple_filter.dart';
+import '../../../core/utils/utils.dart';
 import '../../auth/controller/auth_controller.dart';
 import '../../community/controller/community_controller.dart';
 import '../controller/post_controller.dart';
@@ -297,8 +297,19 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
       isSharing = true;
     });
 
+    final titleText = titleController.text.trim();
     final captionText = captionController.text.trim();
     final postController = Get.find<PostController>();
+    if (!SimpleFilter.isClean(titleText)) {
+      showSnackBar(context, 'Your title contains disallowed words.');
+      setState(() => isSharing = false);
+      return;
+    }
+    if (!SimpleFilter.isClean(captionText)) {
+      showSnackBar(context, 'Your caption contains disallowed words.');
+      setState(() => isSharing = false);
+      return;
+    }
 
     // Transform tags before sending
     final transformedTags = taggedUsers.map((list) {

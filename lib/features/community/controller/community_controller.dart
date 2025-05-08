@@ -7,7 +7,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:xabe/core/constants/constants.dart';
-import 'package:xabe/core/utils.dart';
+import 'package:xabe/core/utils/utils.dart';
 import 'package:xabe/features/community/repository/community_repository.dart';
 import 'package:xabe/models/community_model.dart';
 import 'package:xabe/models/post_model.dart';

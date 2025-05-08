@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image/image.dart' as img;
-import 'package:xabe/core/utils.dart';
+import 'package:xabe/core/utils/utils.dart';
 import 'package:xabe/models/post_model.dart';
 import 'package:xabe/models/user_model.dart';
 import '../../../core/providers/storage_repository.dart';

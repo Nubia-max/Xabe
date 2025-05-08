@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xabe/core/common/error_text.dart';
 import 'package:xabe/core/common/loader.dart';
-import 'package:xabe/core/utils.dart';
+import 'package:xabe/core/utils/utils.dart';
 import 'package:xabe/models/community_model.dart';
 
+import '../../../core/utils/simple_filter.dart';
 import '../controller/community_controller.dart';
 
 class EditCommunityScreen extends StatefulWidget {
@@ -71,6 +72,11 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
   }
 
   void save(Community community) {
+    final newName = communityNameController.text.trim();
+    if (!SimpleFilter.isClean(newName)) {
+      showSnackBar(context, 'Community name contains disallowed words.');
+      return;
+    }
     // Update the community model with the new name before saving.
     final updatedCommunity = community.copyWith(
       name: communityNameController.text.trim(),

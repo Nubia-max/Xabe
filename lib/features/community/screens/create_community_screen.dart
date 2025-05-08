@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xabe/core/common/loader.dart';
 
+import '../../../core/utils/simple_filter.dart';
+import '../../../core/utils/utils.dart';
 import '../../../theme/theme_controller.dart';
 import '../controller/community_controller.dart';
 
@@ -25,6 +27,11 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   }
 
   void createCommunity() {
+    final name = communityNameController.text.trim();
+    if (!SimpleFilter.isClean(name)) {
+      showSnackBar(context, 'Community name contains disallowed words.');
+      return;
+    }
     Get.find<CommunityController>().createCommunity(
       communityNameController.text.trim(),
       bioController.text.trim(),

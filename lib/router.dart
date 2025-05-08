@@ -20,6 +20,7 @@ import 'package:xabe/responsive/responsive_layout.dart';
 import 'package:xabe/responsive/web_screen_layout.dart';
 
 import '../models/post_model.dart';
+import 'core/terms_screen.dart';
 import 'features/community/controller/community_controller.dart';
 import 'features/home/widgets/add_thumbnails.dart';
 
@@ -39,6 +40,15 @@ final List<GetPage> appRoutes = [
     ),
   ),
 
+  // TermsScreen (Add route for EULA agreement flow)
+  GetPage(
+    name: '/terms',
+    page: () => TermsScreen(onAgreed: () {
+      // Navigate to the main app content once terms are agreed
+      Get.offAllNamed('/'); // Navigate to the home screen
+    }),
+  ),
+
   // Create Community Screen
   GetPage(
     name: '/create-community',
@@ -49,7 +59,7 @@ final List<GetPage> appRoutes = [
     ),
   ),
 
-  // Community Screen (uses ID)
+// Community Screen (uses ID)
   GetPage(
     name: '/X/:id',
     page: () {

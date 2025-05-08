@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xabe/core/utils.dart';
+import 'package:xabe/core/utils/utils.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../features/community/controller/community_controller.dart';
 import '../features/posts/controller/post_controller.dart';

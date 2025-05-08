@@ -8,7 +8,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:xabe/core/constants/firebase_constants.dart';
-import 'package:xabe/core/utils.dart';
+import 'package:xabe/core/utils/utils.dart';
 import 'package:xabe/features/posts/repository/post_repository.dart';
 import 'package:xabe/models/comment_model.dart';
 import 'package:xabe/models/community_model.dart';

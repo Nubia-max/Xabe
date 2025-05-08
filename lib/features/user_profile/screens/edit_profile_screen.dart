@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xabe/core/utils.dart';
+import 'package:xabe/core/utils/utils.dart';
 
 import '../controller/user_profile_controller.dart';
 

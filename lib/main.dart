@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +12,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_strategy/url_strategy.dart';
 
+import 'core/terms_screen.dart';
 import 'router.dart';
 import 'firebase_options.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
@@ -28,14 +30,11 @@ import 'package:xabe/features/user_profile/repository/user_profile_repository.da
 import 'package:xabe/features/notifications/notification_controller.dart';
 import 'package:xabe/features/notifications/notification_repository.dart';
 
-// Real Ad Unit IDs
 const String _androidBannerAdUnitId = 'ca-app-pub-8352296755977335/6184022554';
 const String _iosBannerAdUnitId = 'ca-app-pub-8352296755977335/3919625753';
 
 String get bannerAdUnitId {
-  if (kIsWeb) {
-    throw UnsupportedError('Ads are not supported on web');
-  }
+  if (kIsWeb) throw UnsupportedError('Ads are not supported on web');
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
       return _androidBannerAdUnitId;
@@ -59,12 +58,17 @@ Future<void> main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // Activate AppCheck only on mobile platforms
+
+  // AppCheck
   if (!kIsWeb) {
     await FirebaseAppCheck.instance.activate(
       appleProvider: AppleProvider.deviceCheck,
     );
   }
+
+  // Initialize ThemeController (ensure that it's added before usage)
+  Get.put<ThemeController>(
+      ThemeController()); // <-- Add this line to register the ThemeController
 
   // Dependency injection
   final firestore = FirebaseFirestore.instance;
@@ -114,9 +118,6 @@ Future<void> main() async {
     notiService: notiService,
   ));
 
-  // Theme
-  Get.put<ThemeController>(ThemeController());
-
   // URL strategy for web
   setPathUrlStrategy();
 
@@ -133,10 +134,12 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late final BannerAd _bannerAd;
   bool _isAdLoaded = false;
+  bool _agreed = false;
 
   @override
   void initState() {
     super.initState();
+    _checkEulaAgreement();
     // Initialize banner ads only for mobile platforms
     if (!kIsWeb) {
       _bannerAd = BannerAd(
@@ -154,6 +157,17 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  // Check EULA agreement state
+  Future<void> _checkEulaAgreement() async {
+    final prefs = await SharedPreferences.getInstance();
+    final version = prefs.getInt(kEulaVersionKey) ?? 0;
+    if (version < kCurrentEulaVersion) {
+      setState(() => _agreed = false);
+    } else {
+      setState(() => _agreed = true);
+    }
+  }
+
   @override
   void dispose() {
     // Dispose of the banner ad only for mobile platforms
@@ -165,7 +179,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeController = Get.find<ThemeController>();
+    final themeController =
+        Get.find<ThemeController>(); // Now `ThemeController` can be found
 
     return Obx(() {
       return GetMaterialApp(
@@ -176,17 +191,35 @@ class _MyAppState extends State<MyApp> {
         themeMode: themeController.mode.value,
         initialRoute: '/login',
         getPages: appRoutes,
-        builder: (context, child) => Scaffold(
-          body: child,
-          bottomNavigationBar: (!kIsWeb && _isAdLoaded)
-              ? SizedBox(
-                  height: _bannerAd.size.height.toDouble(),
-                  width: _bannerAd.size.width.toDouble(),
-                  child: AdWidget(ad: _bannerAd),
-                )
-              : null,
-        ),
+        builder: (context, child) {
+          // Show TermsScreen if not agreed to EULA
+          if (!_agreed) {
+            return TermsScreen(onAgreed: _onAgreed);
+          }
+
+          return Scaffold(
+            body: child,
+            bottomNavigationBar: (!kIsWeb && _isAdLoaded)
+                ? SizedBox(
+                    height: _bannerAd.size.height.toDouble(),
+                    width: _bannerAd.size.width.toDouble(),
+                    child: AdWidget(ad: _bannerAd),
+                  )
+                : null,
+          );
+        },
       );
     });
+  }
+
+  // When user agrees to the Terms
+  Future<void> _onAgreed() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(kEulaVersionKey, kCurrentEulaVersion);
+    setState(() => _agreed = true);
+
+    // Navigate to home screen after agreement
+    Get.offAllNamed(
+        '/'); // <-- Ensure the navigation happens correctly after agreement
   }
 }
