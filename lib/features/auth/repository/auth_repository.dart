@@ -1,4 +1,3 @@
-// repositories/auth_repository.dart
 import 'dart:convert';
 import 'dart:math';
 
@@ -40,7 +39,6 @@ class AuthRepository {
       if (kIsWeb) {
         // For web, use the popup flow with GoogleAuthProvider
         GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        // Optionally, add additional scopes:
         googleProvider
             .addScope('https://www.googleapis.com/auth/userinfo.email');
         googleProvider
@@ -73,6 +71,7 @@ class AuthRepository {
           uid: userCredential.user!.uid,
           isAuthenticated: true,
           bio: '',
+          blockedUsers: [], // Initialize blockedUsers as empty list
         );
         await _users.doc(userCredential.user!.uid).set(userModel.toMap());
       } else {
@@ -91,6 +90,7 @@ class AuthRepository {
     }
   }
 
+  // Stream to fetch user data
   Stream<UserModel> getUserData(String uid) {
     return _firestore
         .collection(FirebaseConstants.usersCollection)
@@ -106,6 +106,7 @@ class AuthRepository {
           profilePic: Constants.avatarDefault,
           bio: '',
           isAuthenticated: true,
+          blockedUsers: [], // Initialize with an empty list
         );
         await snapshot.reference.set(user.toMap());
         return user;
@@ -114,11 +115,27 @@ class AuthRepository {
     });
   }
 
+  // Function to block a user
+  Future<void> blockUser(String targetUserId) async {
+    final currentUserId = _auth.currentUser!.uid;
+
+    // Add the target user to the current user's blocked list
+    await _firestore.collection('users').doc(currentUserId).update({
+      'blockedUsers':
+          FieldValue.arrayUnion([targetUserId]), // Add to blockedUsers
+    });
+
+    // Optionally, you can remove the posts of the blocked user from the view
+    // by filtering posts based on the blockedUsers list.
+  }
+
+  // Function to log out the user
   Future<void> logOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
+  // Function to sign in with Apple
   FutureEither<UserModel> signInWithApple(bool isFromLogin) async {
     try {
       final rawNonce = _generateNonce();
@@ -155,6 +172,7 @@ class AuthRepository {
           uid: userCredential.user!.uid,
           isAuthenticated: true,
           bio: '',
+          blockedUsers: [], // Initialize blockedUsers for new users
         );
         await _users.doc(userModel.uid).set(userModel.toMap());
       } else {
@@ -171,6 +189,7 @@ class AuthRepository {
     }
   }
 
+  // Function to generate a nonce for Apple sign-in
   String _generateNonce([int length = 32]) {
     final charset =
         '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
@@ -179,13 +198,14 @@ class AuthRepository {
         .join();
   }
 
+  // Function to generate SHA-256 hash of a string
   String _sha256ofString(String input) {
     final bytes = utf8.encode(input);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }
 
-  /// Deletes the currently signed-in user and their Firestore profile.
+  // Function to delete the user's account
   Future<Either<Failure, void>> deleteAccount() async {
     try {
       final user = _firebaseAuth.currentUser;
@@ -195,7 +215,7 @@ class AuthRepository {
 
       final uid = user.uid;
 
-      // 1) Delete any Firestore user‐doc
+      // 1) Delete Firestore user document
       await _firestore.collection('users').doc(uid).delete();
 
       // 2) Delete Firebase Auth user

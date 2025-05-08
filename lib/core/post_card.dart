@@ -5,8 +5,10 @@ import 'package:xabe/core/utils/utils.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../features/community/controller/community_controller.dart';
 import '../features/posts/controller/post_controller.dart';
+import '../features/posts/widgets/block_button.dart';
 import '../features/posts/widgets/dot_indicator.dart';
 import '../features/posts/widgets/election_time.dart';
+import '../features/posts/widgets/flag_button.dart';
 import '../features/posts/widgets/like_animation.dart';
 import '../features/posts/widgets/neo_button.dart';
 import 'package:lottie/lottie.dart';
@@ -366,6 +368,11 @@ class _PostCardState extends State<PostCard>
                                             icon: Icon(Icons.delete,
                                                 color: Pallete.redColor),
                                           ),
+                                        FlagButton(
+                                          contentId: widget.post.id,
+                                          contentType: 'posts',
+                                          authorId: widget.post.uid,
+                                        ),
                                       ],
                                     ),
                                   ],

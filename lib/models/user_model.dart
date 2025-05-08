@@ -1,11 +1,14 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 class UserModel {
   final String name;
   final String bio; // New field
   final String profilePic;
   final String uid;
   final bool isAuthenticated;
+  final List<String> blockedUsers; // New field to store blocked user IDs
 
   UserModel({
     required this.name,
@@ -13,6 +16,7 @@ class UserModel {
     required this.profilePic,
     required this.uid,
     required this.isAuthenticated,
+    required this.blockedUsers, // Add blockedUsers in the constructor
   });
 
   UserModel copyWith({
@@ -21,6 +25,7 @@ class UserModel {
     String? profilePic,
     String? uid,
     bool? isAuthenticated,
+    List<String>? blockedUsers, // Add blockedUsers to copyWith
   }) {
     return UserModel(
       name: name ?? this.name,
@@ -28,6 +33,8 @@ class UserModel {
       profilePic: profilePic ?? this.profilePic,
       uid: uid ?? this.uid,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      blockedUsers:
+          blockedUsers ?? this.blockedUsers, // Handle blockedUsers here
     );
   }
 
@@ -38,6 +45,7 @@ class UserModel {
       'profilePic': profilePic,
       'uid': uid,
       'isAuthenticated': isAuthenticated,
+      'blockedUsers': blockedUsers, // Add blockedUsers to the map
     };
   }
 
@@ -49,6 +57,8 @@ class UserModel {
       profilePic: map['profilePic'] as String? ?? 'No Profile Pic',
       uid: map['uid'] as String? ?? 'No UID',
       isAuthenticated: map['isAuthenticated'] as bool? ?? false,
+      blockedUsers:
+          List<String>.from(map['blockedUsers'] ?? []), // Parse blockedUsers
     );
   }
 
@@ -59,7 +69,7 @@ class UserModel {
 
   @override
   String toString() {
-    return 'UserModel(name: $name, bio: $bio, profilePic: $profilePic, uid: $uid, isAuthenticated: $isAuthenticated)';
+    return 'UserModel(name: $name, bio: $bio, profilePic: $profilePic, uid: $uid, isAuthenticated: $isAuthenticated, blockedUsers: $blockedUsers)';
   }
 
   @override
@@ -70,7 +80,8 @@ class UserModel {
         other.bio == bio &&
         other.profilePic == profilePic &&
         other.uid == uid &&
-        other.isAuthenticated == isAuthenticated;
+        other.isAuthenticated == isAuthenticated &&
+        listEquals(other.blockedUsers, blockedUsers); // Compare blockedUsers
   }
 
   @override
@@ -79,6 +90,7 @@ class UserModel {
         bio.hashCode ^
         profilePic.hashCode ^
         uid.hashCode ^
-        isAuthenticated.hashCode;
+        isAuthenticated.hashCode ^
+        blockedUsers.hashCode; // Include blockedUsers in hashCode
   }
 }

@@ -1,25 +1,30 @@
-// user_profile_screen.dart
-
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get/get.dart';
-import 'package:xabe/core/common/error_text.dart';
-import 'package:xabe/core/common/loader.dart';
-import '../../../core/post_card.dart';
+import 'package:xabe/features/auth/controller/auth_controller.dart';
+import 'package:xabe/features/user_profile/controller/user_profile_controller.dart';
+import 'package:xabe/features/posts/controller/post_controller.dart';
+import 'package:xabe/core/utils/utils.dart';
+import 'package:xabe/core/post_card.dart';
+
+import '../../../core/common/error_text.dart';
+import '../../../core/common/loader.dart';
 import '../../../models/post_model.dart';
-import '../controller/user_profile_controller.dart';
-import '../../auth/controller/auth_controller.dart';
 
 class UserProfileScreen extends StatelessWidget {
   final String uid;
   const UserProfileScreen({super.key, required this.uid});
 
+  // Navigate to Edit Profile screen
   void navigateToEditUser(BuildContext context) async {
     await Get.toNamed('/edit-profile/$uid');
   }
 
+  // Image provider for profile images, checking web or mobile
   ImageProvider getImageProvider(String imageUrl) {
     if (imageUrl.startsWith('http')) {
       if (kIsWeb) {
@@ -34,11 +39,53 @@ class UserProfileScreen extends StatelessWidget {
     }
   }
 
+  // Show confirmation dialog before blocking
+  void _showConfirmationDialog(BuildContext context, String targetUserId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Block User"),
+          content: const Text("Are you sure you want to block this user?"),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close the dialog
+                await _blockUser(targetUserId); // Block the user
+              },
+              child: const Text("Block", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Actual function to block the user
+  Future<void> _blockUser(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    // Block the target user by adding them to the blocked list in Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .collection('blocked')
+        .doc(targetUserId)
+        .set({'timestamp': FieldValue.serverTimestamp()});
+
+    // Optionally, show feedback to the user
+    Get.snackbar('Blocked', 'The user has been blocked successfully.');
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Retrieve current logged in user.
+    // Retrieve current logged-in user
     final currentUser = Get.find<AuthController>().userModel.value!;
     final userProfileController = Get.find<UserProfileController>();
+
     return StreamBuilder(
       stream: userProfileController.getUserData(uid),
       builder: (context, snapshot) {
@@ -47,6 +94,7 @@ class UserProfileScreen extends StatelessWidget {
         }
         if (!snapshot.hasData) return const Loader();
         final user = snapshot.data!;
+
         return Scaffold(
           body: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -95,6 +143,7 @@ class UserProfileScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                // SliverPadding for user information (name, bio)
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList(
@@ -119,12 +168,27 @@ class UserProfileScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                )
+                ),
+                // Block User button if viewing another user's profile
+                if (currentUser.uid != uid)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate(
+                        [
+                          ElevatedButton(
+                            onPressed: () =>
+                                _showConfirmationDialog(context, user.uid),
+                            child: const Text("Block User"),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ];
             },
             body: StreamBuilder<List<Post>>(
-              stream: userProfileController.getUserPosts(
-                  uid), // Ensure this returns a Stream<List<Post>>
+              stream: userProfileController.getUserPosts(uid),
               builder: (context, snapshotPosts) {
                 // Check for errors in the stream
                 if (snapshotPosts.hasError) {
@@ -153,7 +217,10 @@ class UserProfileScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final post = posts[index];
 
-                    // Pass the post to your PostCard widget
+                    // Show post only if not blocked
+                    if (currentUser.blockedUsers.contains(post.uid)) {
+                      return const SizedBox.shrink();
+                    }
                     return PostCard(post: post);
                   },
                 );
