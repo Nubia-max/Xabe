@@ -6,6 +6,8 @@ import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:flutter/foundation.dart'; // for kIsWeb
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:xabe/core/constants/constants.dart';
@@ -115,18 +117,57 @@ class AuthRepository {
     });
   }
 
-  // Function to block a user
-  Future<void> blockUser(String targetUserId) async {
-    final currentUserId = _auth.currentUser!.uid;
+  // In auth_repository.dart
 
-    // Add the target user to the current user's blocked list
-    await _firestore.collection('users').doc(currentUserId).update({
+// Block a user
+  Future<void> blockUser(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Add target user to the current user's blocked list
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .update({
       'blockedUsers':
           FieldValue.arrayUnion([targetUserId]), // Add to blockedUsers
     });
 
-    // Optionally, you can remove the posts of the blocked user from the view
-    // by filtering posts based on the blockedUsers list.
+    // Optionally, show feedback to the user
+    Get.snackbar('Blocked', 'The user has been blocked successfully.');
+  }
+  // In auth_repository.dart
+
+// Method to get blocked users
+  Stream<List<String>> getBlockedUsers(String currentUserId) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .snapshots()
+        .map((doc) {
+      final data = doc.data();
+      if (data != null && data['blockedUsers'] != null) {
+        return List<String>.from(data['blockedUsers']);
+      } else {
+        return [];
+      }
+    });
+  }
+
+// Unblock a user
+  Future<void> unblockUser(String targetUserId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Remove target user from the current user's blocked list
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .update({
+      'blockedUsers':
+          FieldValue.arrayRemove([targetUserId]), // Remove from blockedUsers
+    });
+
+    // Optionally, show feedback to the user
+    Get.snackbar('Unblocked', 'The user has been unblocked successfully.');
   }
 
   // Function to log out the user

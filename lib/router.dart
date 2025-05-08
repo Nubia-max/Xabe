@@ -22,6 +22,7 @@ import 'package:xabe/responsive/web_screen_layout.dart';
 import '../models/post_model.dart';
 import 'core/terms_screen.dart';
 import 'features/community/controller/community_controller.dart';
+import 'features/home/delegates/blocked_users_screen.dart';
 import 'features/home/widgets/add_thumbnails.dart';
 
 final List<GetPage> appRoutes = [
@@ -38,6 +39,12 @@ final List<GetPage> appRoutes = [
       mobileScreenLayout: MobileScreenLayout(child: const HomeScreen()),
       webScreenLayout: WebScreenLayout(child: const HomeScreen()),
     ),
+  ),
+
+  // Blocked Users Screen
+  GetPage(
+    name: '/blocked-users',
+    page: () => const BlockedUsersScreen(),
   ),
 
   // TermsScreen (Add route for EULA agreement flow)

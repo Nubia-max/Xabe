@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xabe/theme/pallete.dart';
 import '../../auth/controller/auth_controller.dart';
+import '../../auth/repository/auth_repository.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  // Function to confirm and delete the account
   void _confirmAndDelete(BuildContext context) {
     showDialog(
       context: context,
@@ -51,6 +53,11 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // Function to navigate to the Blocked Users tab
+  void navigateToBlockedUsers(BuildContext context) async {
+    Get.toNamed('/blocked-users');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +72,13 @@ class SettingsScreen extends StatelessWidget {
               textColor: Pallete.redColor,
               iconColor: Pallete.redColor,
               onTap: () => _confirmAndDelete(context),
+            ),
+            const SizedBox(height: 10),
+            // Blocked Users Tab
+            ListTile(
+              leading: const Icon(Icons.block),
+              title: const Text('Blocked Users'),
+              onTap: () => navigateToBlockedUsers(context),
             ),
           ],
         ),

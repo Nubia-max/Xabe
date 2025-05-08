@@ -28,17 +28,14 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  // Filter state.
   PostFilter selectedFilter = PostFilter.all;
 
-  // Controllers.
   final authController = Get.find<AuthController>();
   final communityController = Get.find<CommunityController>();
 
   @override
   void initState() {
     super.initState();
-    // Apply initial filter from route params, if any.
     final filterParam = Get.parameters['filter'];
     if (filterParam == 'carousel2') {
       selectedFilter = PostFilter.campaign;
@@ -56,7 +53,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
       );
     }
 
-    // Listen to the raw document so we can detect deletion.
     final docStream = FirebaseFirestore.instance
         .collection('communities')
         .doc(widget.communityId)
@@ -66,22 +62,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: docStream,
         builder: (context, snapshot) {
-          // 1) Firestore error?
           if (snapshot.hasError) {
             return ErrorText(error: snapshot.error.toString());
           }
 
-          // 2) Still loading?
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Loader();
           }
 
           final docSnap = snapshot.data;
-          // 3) Document deleted or never existed
           if (docSnap == null || !docSnap.exists) {
-            // Navigate away & show feedback once
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              // If already popped, skip
               if (Get.currentRoute != '/') {
                 Get.offAllNamed('/');
                 Get.snackbar(
@@ -91,15 +82,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 );
               }
             });
-            // Render an empty scaffold while we transition
             return const Scaffold();
           }
 
-          // 4) Document exists: build your Community object
-          // RIGHT: pass only the map
           final data = docSnap.data()!;
-          final community = Community.fromMap(
-              data); // :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
+          final community = Community.fromMap(data);
 
           final isGuest = !user.isAuthenticated;
           final isMod = community.mods.contains(user.uid);
@@ -160,7 +147,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         community.members.contains(user.uid);
 
                                     if (isMember) {
-                                      // Confirm before leaving
                                       final shouldLeave =
                                           await showDialog<bool>(
                                         context: context,
@@ -314,7 +300,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       }
                       return ListView.builder(
                         itemCount: filtered.length,
-                        itemBuilder: (_, i) => PostCard(post: filtered[i]),
+                        itemBuilder: (_, i) {
+                          final post = filtered[i];
+
+                          // Filter out posts from blocked users
+                          if (user.blockedUsers.contains(post.uid)) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return PostCard(post: post);
+                        },
                       );
                     },
                   )
