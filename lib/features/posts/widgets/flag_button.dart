@@ -17,6 +17,8 @@ class FlagButton extends StatelessWidget {
 
   Future<void> _report(String reason) async {
     final reporterId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Add a new report to the 'reports' collection
     await FirebaseFirestore.instance.collection('reports').add({
       'contentId': contentId,
       'contentType': contentType,
@@ -25,6 +27,14 @@ class FlagButton extends StatelessWidget {
       'reporterId': reporterId,
       'timestamp': FieldValue.serverTimestamp(),
     });
+
+    // Increment the flag count in the posts collection
+    final postRef =
+        FirebaseFirestore.instance.collection(contentType).doc(contentId);
+    await postRef.update({
+      'flagCount': FieldValue.increment(1),
+    });
+
     Get.snackbar(
       'Report submitted',
       'Thanks, we’ll review this shortly.',

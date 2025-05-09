@@ -3,13 +3,14 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeController extends GetxController {
-  final Rx<ThemeMode> mode = ThemeMode.system.obs;
+  final Rx<ThemeMode> mode =
+      ThemeMode.system.obs; // Default theme mode is system
 
   @override
   void onInit() {
     super.onInit();
-    ever(mode, (_) => _saveTheme());
-    getTheme();
+    ever(mode, (_) => _saveTheme()); // Save theme when it changes
+    getTheme(); // Initialize the theme from shared preferences
   }
 
   bool get isDarkMode {
@@ -23,6 +24,7 @@ class ThemeController extends GetxController {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final theme = prefs.getString('theme');
 
+    // Set theme based on saved preference or system default
     mode.value = theme == 'light'
         ? ThemeMode.light
         : theme == 'dark'

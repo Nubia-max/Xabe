@@ -11,6 +11,7 @@ import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_strategy/url_strategy.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'core/terms_screen.dart';
 import 'router.dart';
@@ -59,18 +60,14 @@ Future<void> main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // AppCheck
+  // Activate AppCheck only on mobile platforms
   if (!kIsWeb) {
     await FirebaseAppCheck.instance.activate(
       appleProvider: AppleProvider.deviceCheck,
     );
   }
 
-  // Initialize ThemeController (ensure that it's added before usage)
-  Get.put<ThemeController>(
-      ThemeController()); // <-- Add this line to register the ThemeController
-
-  // Dependency injection
+  // --- Dependency Injection ---
   final firestore = FirebaseFirestore.instance;
   final firebaseAuth = FirebaseAuth.instance;
   final googleSignIn = GoogleSignIn();
@@ -88,25 +85,21 @@ Future<void> main() async {
   Get.put<AuthController>(AuthController(authRepository: Get.find()));
 
   // Community
-  final communityRepository = CommunityRepository(firestore: firestore);
-  final storageRepository = StorageRepository(firebaseStorage: firebaseStorage);
   Get.put<CommunityController>(CommunityController(
-    communityRepository: communityRepository,
-    storageRepository: storageRepository,
+    communityRepository: CommunityRepository(firestore: firestore),
+    storageRepository: StorageRepository(firebaseStorage: firebaseStorage),
   ));
 
   // User Profile
-  final userProfileRepository = UserProfileRepository(firestore: firestore);
   Get.put<UserProfileController>(UserProfileController(
-    storageRepository: storageRepository,
-    userProfileRepository: userProfileRepository,
+    storageRepository: StorageRepository(firebaseStorage: firebaseStorage),
+    userProfileRepository: UserProfileRepository(firestore: firestore),
   ));
 
   // Posts
-  final postRepository = PostRepository(firestore: firestore);
   Get.put<PostController>(PostController(
-    postRepository: postRepository,
-    storageRepository: storageRepository,
+    postRepository: PostRepository(firestore: firestore),
+    storageRepository: StorageRepository(firebaseStorage: firebaseStorage),
   ));
 
   // Notifications repo & controller
@@ -118,9 +111,13 @@ Future<void> main() async {
     notiService: notiService,
   ));
 
+  // --- Theme ---
+  Get.put<ThemeController>(ThemeController());
+
   // URL strategy for web
   setPathUrlStrategy();
 
+  // --- Run App ---
   runApp(const MyApp());
 }
 
@@ -139,38 +136,35 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    _loadAd();
     _checkEulaAgreement();
-    // Initialize banner ads only for mobile platforms
-    if (!kIsWeb) {
-      _bannerAd = BannerAd(
-        size: AdSize.banner,
-        adUnitId: bannerAdUnitId,
-        listener: BannerAdListener(
-          onAdLoaded: (_) => setState(() => _isAdLoaded = true),
-          onAdFailedToLoad: (ad, err) {
-            ad.dispose();
-            debugPrint('Ad failed to load: $err');
-          },
-        ),
-        request: const AdRequest(),
-      )..load();
-    }
   }
 
-  // Check EULA agreement state
+  void _loadAd() {
+    if (kIsWeb) return;
+
+    _bannerAd = BannerAd(
+      size: AdSize.banner,
+      adUnitId: bannerAdUnitId,
+      listener: BannerAdListener(
+        onAdLoaded: (_) => setState(() => _isAdLoaded = true),
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+          debugPrint('Ad failed to load: $err');
+        },
+      ),
+      request: const AdRequest(),
+    )..load();
+  }
+
   Future<void> _checkEulaAgreement() async {
     final prefs = await SharedPreferences.getInstance();
     final version = prefs.getInt(kEulaVersionKey) ?? 0;
-    if (version < kCurrentEulaVersion) {
-      setState(() => _agreed = false);
-    } else {
-      setState(() => _agreed = true);
-    }
+    setState(() => _agreed = version >= kCurrentEulaVersion);
   }
 
   @override
   void dispose() {
-    // Dispose of the banner ad only for mobile platforms
     if (!kIsWeb) {
       _bannerAd.dispose();
     }
@@ -179,24 +173,22 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeController =
-        Get.find<ThemeController>(); // Now `ThemeController` can be found
+    final themeController = Get.find<ThemeController>();
 
     return Obx(() {
       return GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Xabe',
-        theme: Pallete.lightModeAppTheme,
-        darkTheme: Pallete.darkModeAppTheme,
-        themeMode: themeController.mode.value,
         initialRoute: '/login',
-        getPages: appRoutes,
+        getPages: appRoutes, // Set up your routes here
+        theme: Pallete.lightModeAppTheme, // Light theme from Pallete class
+        darkTheme: Pallete.darkModeAppTheme, // Dark theme from Pallete class
+        themeMode: themeController.mode.value, // Listen to theme mode changes
+
         builder: (context, child) {
-          // Show TermsScreen if not agreed to EULA
           if (!_agreed) {
             return TermsScreen(onAgreed: _onAgreed);
           }
-
           return Scaffold(
             body: child,
             bottomNavigationBar: (!kIsWeb && _isAdLoaded)
@@ -212,14 +204,15 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  // When user agrees to the Terms
   Future<void> _onAgreed() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(kEulaVersionKey, kCurrentEulaVersion);
     setState(() => _agreed = true);
 
-    // Navigate to home screen after agreement
-    Get.offAllNamed(
-        '/'); // <-- Ensure the navigation happens correctly after agreement
+    // Add a small delay to allow GetMaterialApp to initialize properly
+    await Future.delayed(Duration(milliseconds: 500));
+
+    // Now navigate to the home screen
+    Get.offAllNamed('/');
   }
 }

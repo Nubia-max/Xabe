@@ -20,9 +20,10 @@ import 'package:xabe/responsive/responsive_layout.dart';
 import 'package:xabe/responsive/web_screen_layout.dart';
 
 import '../models/post_model.dart';
+import 'admin/admin build.dart';
 import 'core/terms_screen.dart';
 import 'features/community/controller/community_controller.dart';
-import 'features/home/delegates/blocked_users_screen.dart';
+import 'features/home/delegates/blocked_users_screen.dart'; // Add the blocked users screen import
 import 'features/home/widgets/add_thumbnails.dart';
 
 final List<GetPage> appRoutes = [
@@ -66,7 +67,7 @@ final List<GetPage> appRoutes = [
     ),
   ),
 
-// Community Screen (uses ID)
+  // Community Screen (uses ID)
   GetPage(
     name: '/X/:id',
     page: () {
@@ -250,6 +251,7 @@ final List<GetPage> appRoutes = [
       webScreenLayout: WebScreenLayout(child: const NotificationsScreen()),
     ),
   ),
+  GetPage(name: '/moderationQueue', page: () => ModerationQueuePage()),
 
   // Add Thumbnails Screen
   GetPage(

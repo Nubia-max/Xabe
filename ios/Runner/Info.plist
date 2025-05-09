@@ -49,6 +49,9 @@
     <string></string>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.nubiarabo.rogueFashion</string> <!-- Replace with your actual bundle identifier -->
+
 
     <!-- Launch & Storyboards -->
     <key>UILaunchStoryboardName</key>
