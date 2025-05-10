@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get/get.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 import 'package:xabe/features/user_profile/controller/user_profile_controller.dart';
-import 'package:xabe/features/posts/controller/post_controller.dart';
 import 'package:xabe/core/utils/utils.dart';
 import 'package:xabe/core/post_card.dart';
 
@@ -16,11 +16,15 @@ import '../../../core/common/loader.dart';
 import '../../../models/post_model.dart';
 import '../../auth/repository/auth_repository.dart';
 
-// In user_profile_screen.dart
-
 class UserProfileScreen extends StatelessWidget {
   final String uid;
-  const UserProfileScreen({super.key, required this.uid});
+  final String? jumpToPostId;
+
+  const UserProfileScreen({
+    super.key,
+    required this.uid,
+    this.jumpToPostId,
+  });
 
   void navigateToEditUser(BuildContext context) async {
     await Get.toNamed('/edit-profile/$uid');
@@ -29,10 +33,8 @@ class UserProfileScreen extends StatelessWidget {
   ImageProvider getImageProvider(String imageUrl) {
     if (imageUrl.startsWith('http')) {
       if (kIsWeb) {
-        // On web, use NetworkImage
         return NetworkImage(imageUrl);
       } else {
-        // For mobile builds, use CachedNetworkImageProvider.
         return CachedNetworkImageProvider(imageUrl);
       }
     } else {
@@ -40,7 +42,6 @@ class UserProfileScreen extends StatelessWidget {
     }
   }
 
-  // Show confirmation dialog before blocking
   void _showConfirmationDialog(BuildContext context, String targetUserId) {
     showDialog(
       context: context,
@@ -55,8 +56,8 @@ class UserProfileScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop(); // Close the dialog
-                await _blockUser(targetUserId); // Block the user
+                Navigator.of(context).pop();
+                await _blockUser(targetUserId);
               },
               child: const Text("Block", style: TextStyle(color: Colors.red)),
             ),
@@ -66,9 +67,8 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  // Actual function to block the user
   Future<void> _blockUser(String targetUserId) async {
-    await Get.find<AuthRepository>().blockUser(targetUserId); // Block user
+    await Get.find<AuthRepository>().blockUser(targetUserId);
     Get.snackbar('Blocked', 'The user has been blocked successfully.');
   }
 
@@ -76,6 +76,8 @@ class UserProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentUser = Get.find<AuthController>().userModel.value!;
     final userProfileController = Get.find<UserProfileController>();
+    final scrollController = ScrollController();
+    bool hasJumped = false;
 
     return StreamBuilder(
       stream: userProfileController.getUserData(uid),
@@ -86,7 +88,6 @@ class UserProfileScreen extends StatelessWidget {
         if (!snapshot.hasData) return const Loader();
         final user = snapshot.data!;
 
-        // Show message if the user is blocked
         if (currentUser.blockedUsers.contains(user.uid)) {
           return const Center(child: Text("This user has been blocked."));
         }
@@ -103,9 +104,8 @@ class UserProfileScreen extends StatelessWidget {
                     Container(
                       alignment: Alignment.bottomLeft,
                       padding: currentUser.uid == uid
-                          ? const EdgeInsets.all(20).copyWith(
-                              bottom: 70) // Leave space for edit button
-                          : const EdgeInsets.all(20), // No extra bottom space
+                          ? const EdgeInsets.all(20).copyWith(bottom: 70)
+                          : const EdgeInsets.all(20),
                       child: kIsWeb
                           ? CachedWebImage(
                               imageUrl: user.profilePic,
@@ -137,46 +137,40 @@ class UserProfileScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              // SliverPadding for user information (name, bio)
               SliverPadding(
                 padding: const EdgeInsets.all(16),
                 sliver: SliverList(
-                  delegate: SliverChildListDelegate(
-                    [
-                      Text(
-                        'u/${user.name}',
-                        style: const TextStyle(
-                            fontSize: 19, fontWeight: FontWeight.bold),
-                      ),
-                      if (user.bio.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            user.bio,
-                            style: const TextStyle(
-                                fontSize: 14, color: Colors.grey),
-                          ),
+                  delegate: SliverChildListDelegate([
+                    Text(
+                      'u/${user.name}',
+                      style: const TextStyle(
+                          fontSize: 19, fontWeight: FontWeight.bold),
+                    ),
+                    if (user.bio.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          user.bio,
+                          style:
+                              const TextStyle(fontSize: 14, color: Colors.grey),
                         ),
-                      const SizedBox(height: 10),
-                      const Divider(thickness: 2),
-                    ],
-                  ),
+                      ),
+                    const SizedBox(height: 10),
+                    const Divider(thickness: 2),
+                  ]),
                 ),
               ),
-              // Block User button if viewing another user's profile
               if (currentUser.uid != uid)
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverList(
-                    delegate: SliverChildListDelegate(
-                      [
-                        ElevatedButton(
-                          onPressed: () =>
-                              _showConfirmationDialog(context, user.uid),
-                          child: const Text("Block User"),
-                        ),
-                      ],
-                    ),
+                    delegate: SliverChildListDelegate([
+                      ElevatedButton(
+                        onPressed: () =>
+                            _showConfirmationDialog(context, user.uid),
+                        child: const Text("Block User"),
+                      ),
+                    ]),
                   ),
                 ),
             ],
@@ -187,25 +181,50 @@ class UserProfileScreen extends StatelessWidget {
                   return ErrorText(error: snapshotPosts.error.toString());
                 }
 
-                if (!snapshotPosts.hasData) {
-                  return const Loader(); // Custom loading widget
-                }
-
+                if (!snapshotPosts.hasData) return const Loader();
                 final posts = snapshotPosts.data!;
 
                 if (posts.isEmpty) {
                   return const Center(child: Text('No posts available.'));
                 }
 
-                return ListView.builder(
-                  itemCount: posts.length,
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
+                // Extract the jumpToPost if any
+                final jumpPost =
+                    posts.firstWhereOrNull((p) => p.id == jumpToPostId);
+                final remainingPosts =
+                    posts.where((p) => p.id != jumpToPostId).toList();
 
-                    // Show post only if not blocked
+                return ListView.builder(
+                  controller: scrollController,
+                  itemCount: jumpPost == null
+                      ? remainingPosts.length
+                      : remainingPosts.length + 1,
+                  itemBuilder: (context, index) {
+                    // Show the jumpToPost first if available
+                    if (jumpPost != null && index == 0) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text("🚨 Flagged Post",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red)),
+                          ),
+                          PostCard(post: jumpPost),
+                          const Divider(thickness: 1),
+                        ],
+                      );
+                    }
+
+                    final adjustedIndex = jumpPost == null ? index : index - 1;
+                    final post = remainingPosts[adjustedIndex];
+
                     if (currentUser.blockedUsers.contains(post.uid)) {
                       return const SizedBox.shrink();
                     }
+
                     return PostCard(post: post);
                   },
                 );
@@ -215,20 +234,6 @@ class UserProfileScreen extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-ImageProvider getImageProvider(String imageUrl) {
-  if (imageUrl.startsWith('http')) {
-    if (kIsWeb) {
-      // On web, use NetworkImage
-      return NetworkImage(imageUrl);
-    } else {
-      // For mobile builds, use CachedNetworkImageProvider.
-      return CachedNetworkImageProvider(imageUrl);
-    }
-  } else {
-    return AssetImage(imageUrl);
   }
 }
 
@@ -279,7 +284,6 @@ class _CachedWebImageState extends State<CachedWebImage> {
       final file = await DefaultCacheManager().getSingleFile(widget.imageUrl);
       final bytes = await file.readAsBytes();
 
-      // Manage cache size
       if (_cache.length >= _maxCacheSize) {
         _cache.remove(_cache.keys.first);
       }
@@ -297,7 +301,21 @@ class _CachedWebImageState extends State<CachedWebImage> {
   Widget build(BuildContext context) {
     if (_isLoading) return const CircularProgressIndicator();
     if (_error != null) return const Icon(Icons.error);
-    if (_imageBytes != null) return Image.memory(_imageBytes!, fit: widget.fit);
+    if (_imageBytes != null) {
+      return Image.memory(_imageBytes!, fit: widget.fit);
+    }
     return const SizedBox.shrink();
+  }
+}
+
+ImageProvider getImageProvider(String imageUrl) {
+  if (imageUrl.startsWith('http')) {
+    if (kIsWeb) {
+      return NetworkImage(imageUrl);
+    } else {
+      return CachedNetworkImageProvider(imageUrl);
+    }
+  } else {
+    return AssetImage(imageUrl);
   }
 }

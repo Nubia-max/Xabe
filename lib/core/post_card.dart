@@ -371,6 +371,7 @@ class _PostCardState extends State<PostCard>
                                         FlagButton(
                                           contentId: widget.post.id,
                                           contentType: 'posts',
+                                          communityId: widget.post.uid,
                                           authorId: widget.post.uid,
                                         ),
                                       ],
