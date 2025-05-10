@@ -292,10 +292,18 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
   void sharePost() {
     if (isSharing) return;
+    final currentUser = Get.find<AuthController>().userModel.value;
+    final selectedComm = selectedCommunity;
 
-    setState(() {
-      isSharing = true;
-    });
+    if (currentUser == null || selectedComm == null) {
+      showSnackBar(context, "Something went wrong.");
+      return;
+    }
+
+    if (selectedComm.bannedUsers.contains(currentUser.uid)) {
+      showSnackBar(context, "❌ You are banned from posting in this community.");
+      return;
+    }
 
     final titleText = titleController.text.trim();
     final captionText = captionController.text.trim();
@@ -331,7 +339,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         context: context,
         title: titleController.text.trim(),
         caption: captionText,
-        selectedCommunity: selectedCommunity ?? communities[0],
+        selectedCommunity: selectedCommunity!,
         file: bannerFile,
       )
           .then((_) {
@@ -363,7 +371,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
           .shareCarouselPost(
         context: context,
         title: titleController.text.trim(),
-        selectedCommunity: selectedCommunity ?? communities[0],
+        selectedCommunity: selectedCommunity!,
+
         files: carouselImages,
         taggedUsers: transformedTags, // ✅ updated format
         caption: captionText,
@@ -381,7 +390,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
           .shareCarouselPost(
         context: context,
         title: titleController.text.trim(),
-        selectedCommunity: selectedCommunity ?? communities[0],
+        selectedCommunity: selectedCommunity!,
         files: carouselImages,
         taggedUsers: <List<Map<String, dynamic>>>[], // ✅ adjusted type
         isCarousel2: true,
@@ -435,13 +444,35 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed:
-                isSharing ? null : sharePost, // Disable button if sharing
+            onPressed: isSharing ? null : sharePost,
             child: const Text('Share'),
           ),
         ],
       ),
       body: Obx(() {
+        final user = Get.find<AuthController>().userModel.value;
+
+        if (user == null) {
+          return const Center(child: Text("User not logged in."));
+        }
+
+        final selectedComm = selectedCommunity ??
+            (communities.isNotEmpty ? communities[0] : null);
+
+        if (selectedComm != null &&
+            selectedComm.bannedUsers.contains(user.uid)) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text(
+                "🚫 You are banned from posting in this community.\n\nPlease contact the moderator if you think this is a mistake.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.red),
+              ),
+            ),
+          );
+        }
+
         if (postController.isLoading.value) {
           return const Loader();
         }
@@ -451,6 +482,9 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Everything you already had (TextFields, Community picker, Image pickers, etc.)
+              // ⬇️ Keep all this as-is after this point ⬇️
+
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(

@@ -147,13 +147,21 @@ class PostController extends GetxController {
     required String caption,
     required Community selectedCommunity,
     required List<dynamic> files,
-    required List<List<Map<String, dynamic>>> taggedUsers, // updated type
+    required List<List<Map<String, dynamic>>> taggedUsers,
     bool isCarousel2 = false,
     DateTime? electionEndTime,
   }) async {
     isLoading.value = true;
-    final user = Get.find<AuthController>().userModel.value!;
 
+    final user = Get.find<AuthController>().userModel.value!;
+    final bannedInThisCommunity =
+        selectedCommunity.bannedUsers.contains(user.uid);
+
+    if (bannedInThisCommunity) {
+      showSnackBar(context, "❌ You are banned from posting in this community.");
+      setLoading(false); // or isLoading.value = false;
+      return;
+    }
     if (!isCarousel2) {
       if (selectedCommunity.id != "My Profile") {
         final community = await getCommunityById(selectedCommunity.id).first;
@@ -289,11 +297,19 @@ class PostController extends GetxController {
     required String title,
     required String caption,
     required Community selectedCommunity,
-    required dynamic file, // Changed to dynamic
+    required dynamic file,
   }) async {
     setLoading(true);
-    final postId = const Uuid().v1();
+
     final user = Get.find<AuthController>().userModel.value!;
+    final bannedInThisCommunity =
+        selectedCommunity.bannedUsers.contains(user.uid);
+
+    if (bannedInThisCommunity) {
+      showSnackBar(context, "❌ You are banned from posting in this community.");
+      setLoading(false); // or isLoading.value = false;
+      return;
+    }
 
     File? fileToUpload;
     if (!kIsWeb) {
@@ -307,6 +323,8 @@ class PostController extends GetxController {
       setLoading(false);
       return;
     }
+
+    final postId = const Uuid().v1(); // ✅ FIX: This was missing
 
     final imageRes = await _storageRepository.storeFile(
       path: 'posts/${selectedCommunity.id}',

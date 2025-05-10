@@ -12,6 +12,7 @@ class Community {
   final String campaignThumbnailUrl;
   final String electionThumbnailUrl;
   final bool requiresVerification;
+  final List<String> bannedUsers;
 
   Community({
     required this.id,
@@ -25,6 +26,7 @@ class Community {
     this.campaignThumbnailUrl = '',
     this.electionThumbnailUrl = '',
     required this.requiresVerification,
+    this.bannedUsers = const [],
   });
 
   Community copyWith({
@@ -69,6 +71,7 @@ class Community {
       'campaignThumbnailUrl': campaignThumbnailUrl,
       'electionThumbnailUrl': electionThumbnailUrl,
       'requiresVerification': requiresVerification,
+      'bannedUsers': bannedUsers,
     };
   }
 
@@ -85,6 +88,7 @@ class Community {
       campaignThumbnailUrl: map['campaignThumbnailUrl'] as String? ?? '',
       electionThumbnailUrl: map['electionThumbnailUrl'] as String? ?? '',
       requiresVerification: map['requiresVerification'] ?? true,
+      bannedUsers: List<String>.from(map['bannedUsers'] ?? []),
     );
   }
 

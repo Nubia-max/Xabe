@@ -9,6 +9,7 @@ class UserModel {
   final String uid;
   final bool isAuthenticated;
   final List<String> blockedUsers; // New field to store blocked user IDs
+  final bool? bannedFromCommunities; // ✅ ADD THIS
 
   UserModel({
     required this.name,
@@ -17,6 +18,7 @@ class UserModel {
     required this.uid,
     required this.isAuthenticated,
     required this.blockedUsers, // Add blockedUsers in the constructor
+    this.bannedFromCommunities,
   });
 
   UserModel copyWith({
@@ -46,6 +48,7 @@ class UserModel {
       'uid': uid,
       'isAuthenticated': isAuthenticated,
       'blockedUsers': blockedUsers, // Add blockedUsers to the map
+      'bannedFromCommunities': bannedFromCommunities ?? false, // default
     };
   }
 
@@ -57,8 +60,9 @@ class UserModel {
       profilePic: map['profilePic'] as String? ?? 'No Profile Pic',
       uid: map['uid'] as String? ?? 'No UID',
       isAuthenticated: map['isAuthenticated'] as bool? ?? false,
-      blockedUsers:
-          List<String>.from(map['blockedUsers'] ?? []), // Parse blockedUsers
+      blockedUsers: List<String>.from(map['blockedUsers'] ?? []),
+      bannedFromCommunities: map['bannedFromCommunities'] ?? false,
+      // Parse blockedUsers
     );
   }
 

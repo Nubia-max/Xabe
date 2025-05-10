@@ -13,25 +13,6 @@ class ModerationQueuePage extends StatelessWidget {
       .where('status', isEqualTo: 'pending')
       .orderBy('createdAt', descending: true);
 
-  // Subscribe to FCM topics for moderation updates
-  Future<void> subscribeToMyTopics(List<String> communityIds) async {
-    final fcm = FirebaseMessaging.instance;
-    for (final cid in communityIds) {
-      final topic = 'moderators-$cid';
-      await fcm.subscribeToTopic(topic);
-      debugPrint('Subscribed to $topic');
-    }
-  }
-
-  // Unsubscribe from FCM topics when leaving moderation role
-  Future<void> unsubscribeFromAllTopics(List<String> communityIds) async {
-    final fcm = FirebaseMessaging.instance;
-    for (final cid in communityIds) {
-      await fcm.unsubscribeFromTopic('moderators-$cid');
-      debugPrint('Unsubscribed from moderators-$cid');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,7 +40,6 @@ class ModerationQueuePage extends StatelessWidget {
               final authorId = data['authorId'] as String;
               final communityId = data['communityId'] as String;
               final flagCount = data['flagCount'] as int;
-              final status = data['status'] as String;
 
               return Card(
                 margin: const EdgeInsets.all(8),
@@ -69,34 +49,43 @@ class ModerationQueuePage extends StatelessWidget {
                   onTap: () {
                     debugPrint('Navigating from moderation item');
 
-                    Get.to(
-                      () => UserProfileScreen(
-                        uid: authorId,
-                        jumpToPostId: contentId,
-                      ),
-                    );
+                    Get.to(() => UserProfileScreen(
+                          uid: authorId,
+                          jumpToPostId: contentId,
+                        ));
                   },
                   trailing: PopupMenuButton<String>(
                     onSelected: (action) async {
-                      final batch = FirebaseFirestore.instance.batch();
-                      final contentRef = FirebaseFirestore.instance
-                          .collection(contentType)
-                          .doc(contentId);
+                      final firestore = FirebaseFirestore.instance;
+                      final moderationRef = doc.reference;
 
-                      if (action == 'Remove') {
-                        batch.update(contentRef, {'status': 'removed'});
-                      } else if (action == 'Ban User') {
-                        batch.update(
-                          FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(authorId),
-                          {'banned': true},
-                        );
+                      try {
+                        if (action == 'Remove') {
+                          await firestore
+                              .collection(contentType)
+                              .doc(contentId)
+                              .delete();
+                          await moderationRef.update({'status': 'reviewed'});
+                          Get.snackbar(
+                              'Post Removed', 'The content has been deleted.');
+                        } else if (action == 'Ban User') {
+                          // ✅ Updated to perform community-level ban
+                          await firestore
+                              .collection('communities')
+                              .doc(communityId)
+                              .update({
+                            'bannedUsers': FieldValue.arrayUnion([authorId]),
+                          });
+                          await moderationRef.update({'status': 'reviewed'});
+                          Get.snackbar('User Banned',
+                              'User is banned from posting in this community.');
+                        } else if (action == 'Reviewed') {
+                          await moderationRef.update({'status': 'reviewed'});
+                          Get.snackbar('Reviewed', 'Marked as reviewed.');
+                        }
+                      } catch (e) {
+                        Get.snackbar('Error', 'Operation failed: $e');
                       }
-
-                      // Mark the queue item as reviewed
-                      batch.update(doc.reference, {'status': 'reviewed'});
-                      await batch.commit();
                     },
                     itemBuilder: (_) => const [
                       PopupMenuItem(
