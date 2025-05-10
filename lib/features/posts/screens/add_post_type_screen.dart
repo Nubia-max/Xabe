@@ -292,6 +292,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
   void sharePost() {
     if (isSharing) return;
+
+    setState(() {
+      isSharing = true;
+    });
     final currentUser = Get.find<AuthController>().userModel.value;
     final selectedComm = selectedCommunity;
 

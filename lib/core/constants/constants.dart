@@ -6,6 +6,8 @@ class Constants {
   static const loginEmotePath = 'assets/images/loginEmote.png';
   static const googlePath = 'assets/images/google.png';
   static const applePath = 'assets/images/apple.png';
+  static const kEulaVersionKey = 'eulaVersion';
+  static const kCurrentEulaVersion = 1;
 
   static const avatarDefault = 'assets/images/logo.png';
 

@@ -3,35 +3,38 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeController extends GetxController {
-  final Rx<ThemeMode> mode =
-      ThemeMode.system.obs; // Default theme mode is system
+  final Rx<ThemeMode> mode = ThemeMode.system.obs;
 
   @override
   void onInit() {
     super.onInit();
-    ever(mode, (_) => _saveTheme()); // Save theme when it changes
-    getTheme(); // Initialize the theme from shared preferences
+    ever(mode, (_) => _saveTheme());
+    _loadTheme(); // renamed for clarity
   }
 
   bool get isDarkMode {
+    final brightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
     if (mode.value == ThemeMode.system) {
-      return MediaQuery.of(Get.context!).platformBrightness == Brightness.dark;
+      return brightness == Brightness.dark;
     }
     return mode.value == ThemeMode.dark;
   }
 
-  Future<void> getTheme() async {
+  Future<void> _loadTheme() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final theme = prefs.getString('theme');
 
-    // Set theme based on saved preference or system default
-    mode.value = theme == 'light'
-        ? ThemeMode.light
-        : theme == 'dark'
-            ? ThemeMode.dark
-            : MediaQuery.of(Get.context!).platformBrightness == Brightness.dark
-                ? ThemeMode.dark
-                : ThemeMode.light;
+    if (theme == 'light') {
+      mode.value = ThemeMode.light;
+    } else if (theme == 'dark') {
+      mode.value = ThemeMode.dark;
+    } else {
+      final brightness =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      mode.value =
+          brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light;
+    }
   }
 
   Future<void> _saveTheme() async {

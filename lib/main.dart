@@ -137,7 +137,6 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _loadAd();
-    _checkEulaAgreement();
   }
 
   void _loadAd() {
@@ -157,12 +156,6 @@ class _MyAppState extends State<MyApp> {
     )..load();
   }
 
-  Future<void> _checkEulaAgreement() async {
-    final prefs = await SharedPreferences.getInstance();
-    final version = prefs.getInt(kEulaVersionKey) ?? 0;
-    setState(() => _agreed = version >= kCurrentEulaVersion);
-  }
-
   @override
   void dispose() {
     if (!kIsWeb) {
@@ -180,15 +173,16 @@ class _MyAppState extends State<MyApp> {
         debugShowCheckedModeBanner: false,
         title: 'Xabe',
         initialRoute: '/login',
-        getPages: appRoutes, // Set up your routes here
-        theme: Pallete.lightModeAppTheme, // Light theme from Pallete class
-        darkTheme: Pallete.darkModeAppTheme, // Dark theme from Pallete class
-        themeMode: themeController.mode.value, // Listen to theme mode changes
+        getPages: appRoutes,
+        // Set up your routes here
+        theme: Pallete.lightModeAppTheme,
+        // Light theme from Pallete class
+        darkTheme: Pallete.darkModeAppTheme,
+        // Dark theme from Pallete class
+        themeMode: themeController.mode.value,
+        // Listen to theme mode changes
 
         builder: (context, child) {
-          if (!_agreed) {
-            return TermsScreen(onAgreed: _onAgreed);
-          }
           return Scaffold(
             body: child,
             bottomNavigationBar: (!kIsWeb && _isAdLoaded)
@@ -202,17 +196,5 @@ class _MyAppState extends State<MyApp> {
         },
       );
     });
-  }
-
-  Future<void> _onAgreed() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(kEulaVersionKey, kCurrentEulaVersion);
-    setState(() => _agreed = true);
-
-    // Add a small delay to allow GetMaterialApp to initialize properly
-    await Future.delayed(Duration(milliseconds: 500));
-
-    // Now navigate to the home screen
-    Get.offAllNamed('/');
   }
 }
