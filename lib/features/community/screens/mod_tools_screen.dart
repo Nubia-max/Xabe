@@ -1,5 +1,3 @@
-// lib/features/community/presentation/mod_tools_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -71,42 +69,88 @@ class ModToolsScreen extends StatelessWidget {
     );
   }
 
+  Future<String> _fetchUsername(String uid) async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      return doc.data()?['name'] ?? uid;
+    } catch (_) {
+      return uid;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Grab the current user's UID
     final currentUid = Get.find<AuthController>().userModel.value?.uid;
-
-    // Only the creator (community.creatorId) can delete
     final isCreator = currentUid != null && currentUid == community.creatorUid;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mod Tools')),
-      body: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.add_moderator),
-            title: const Text('Add Moderators'),
-            onTap: _navigateToAddMods,
-          ),
-          ListTile(
-            leading: const Icon(Icons.edit),
-            title: const Text('Edit Community'),
-            onTap: _navigateToEditCommunity,
-          ),
-
-          // Conditionally render the Delete option
-          if (isCreator) ...[
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add_moderator),
+              title: const Text('Add Moderators'),
+              onTap: _navigateToAddMods,
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Community'),
+              onTap: _navigateToEditCommunity,
+            ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.delete_forever, color: Colors.red),
-              title: const Text(
-                'Delete Community',
-                style: TextStyle(color: Colors.red),
-              ),
-              onTap: () => _confirmAndDelete(context),
+              leading: const Icon(Icons.block),
+              title: const Text('Banned Users'),
+              subtitle: community.bannedUsers.isEmpty
+                  ? const Text('No banned users.')
+                  : null,
             ),
+            ...community.bannedUsers.map((uid) {
+              return FutureBuilder<String>(
+                future: _fetchUsername(uid),
+                builder: (context, snapshot) {
+                  final username = snapshot.data ?? uid;
+                  return ListTile(
+                    leading: const Icon(Icons.person_off),
+                    title: Text(username),
+                    subtitle: Text('UID: $uid'),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.undo, color: Colors.green),
+                      tooltip: 'Unban User',
+                      onPressed: () async {
+                        await FirebaseFirestore.instance
+                            .collection('communities')
+                            .doc(community.id)
+                            .update({
+                          'bannedUsers': FieldValue.arrayRemove([uid]),
+                        });
+
+                        Get.snackbar(
+                          'User Unbanned',
+                          '$username has been unbanned from the community.',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      },
+                    ),
+                  );
+                },
+              );
+            }).toList(),
+            if (isCreator) ...[
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.delete_forever, color: Colors.red),
+                title: const Text(
+                  'Delete Community',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () => _confirmAndDelete(context),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

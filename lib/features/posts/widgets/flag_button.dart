@@ -1,9 +1,8 @@
-// lib/widgets/flag_button.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xabe/features/notifications/notification_controller.dart';
 
 class FlagButton extends StatelessWidget {
   final String contentId;
@@ -41,14 +40,43 @@ class FlagButton extends StatelessWidget {
           {
             'contentId': contentId,
             'communityId': communityId,
-            'contentType': contentType, // ← add this
-            'authorId': authorId, // ← and add this
+            'contentType': contentType,
+            'authorId': authorId,
             'flagCount': updated,
             'createdAt': FieldValue.serverTimestamp(),
             'status': 'pending',
           },
           SetOptions(merge: true),
         );
+
+        // ✅ Notify all moderators of the community
+        final communityDoc = await FirebaseFirestore.instance
+            .collection('communities')
+            .doc(communityId)
+            .get();
+
+        if (communityDoc.exists) {
+          final communityData = communityDoc.data()!;
+          final communityName = communityData['name'] ?? 'a community';
+          final List<String> mods =
+              List<String>.from(communityData['mods'] ?? []);
+          final user = FirebaseAuth.instance.currentUser;
+
+          for (final modId in mods) {
+            if (modId != user?.uid) {
+              await Get.find<NotificationController>().sendNotification(
+                recipientId: modId,
+                senderId: user?.uid ?? '',
+                senderName: user?.displayName ?? 'A user',
+                message:
+                    'Flagged post in $communityName action required in moderation queue.',
+                type: 'moderation_alert',
+                communityId: communityId,
+                communityName: communityName,
+              );
+            }
+          }
+        }
       }
     });
 
