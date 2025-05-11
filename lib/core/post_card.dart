@@ -514,7 +514,7 @@ class _PostCardState extends State<PostCard>
                                                                               4),
                                                                     ),
                                                                     child: Text(
-                                                                      'Tagged: $displayName',
+                                                                      ' $displayName',
                                                                       style:
                                                                           const TextStyle(
                                                                         color: Colors

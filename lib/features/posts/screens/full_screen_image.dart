@@ -183,7 +183,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        'Tagged: $name',
+                        ' $name',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
