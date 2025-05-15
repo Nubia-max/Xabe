@@ -10,7 +10,6 @@ import 'package:xabe/models/community_model.dart';
 import 'package:xabe/models/post_model.dart';
 import 'join_community_verification_screen.dart';
 
-// Extend the filter enum to include campaign and news.
 enum PostFilter { all, elections, campaign }
 
 class CommunityScreen extends StatefulWidget {
@@ -18,13 +17,13 @@ class CommunityScreen extends StatefulWidget {
   final String filter;
 
   const CommunityScreen({
-    super.key,
+    Key? key,
     required this.communityId,
     this.filter = '',
-  });
+  }) : super(key: key);
 
   @override
-  _CommunityScreenState createState() => _CommunityScreenState();
+  State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
@@ -36,12 +35,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
-    final filterParam = Get.parameters['filter'];
-    if (filterParam == 'carousel2') {
+
+    if (widget.filter == 'carousel2') {
       selectedFilter = PostFilter.campaign;
-    } else if (filterParam == 'carousel') {
+    } else if (widget.filter == 'carousel') {
       selectedFilter = PostFilter.elections;
     }
+  }
+
+  Future<void> _refresh() async {
+    await communityController.refreshUserCommunities();
+    await Future.delayed(const Duration(seconds: 2));
   }
 
   @override
@@ -53,14 +57,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
       );
     }
 
-    final docStream = FirebaseFirestore.instance
+    final communityDocStream = FirebaseFirestore.instance
         .collection('communities')
         .doc(widget.communityId)
         .snapshots();
 
     return Scaffold(
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: docStream,
+        stream: communityDocStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return ErrorText(error: snapshot.error.toString());
@@ -93,7 +97,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
           return NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              SliverAppBar(
+              const SliverAppBar(
                 expandedHeight: 10,
                 floating: true,
                 snap: true,
@@ -111,7 +115,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             radius: 35,
                             backgroundImage: community.avatar.isEmpty
                                 ? const AssetImage('assets/images/logo.png')
-                                : getImageProvider(community.avatar),
+                                : _getImageProvider(community.avatar),
                           ),
                           const SizedBox(height: 5),
                           Row(
@@ -124,11 +128,11 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (!isGuest && isMod)
+                              if (isMod)
                                 OutlinedButton(
                                   onPressed: () {
                                     Get.toNamed(
-                                      '/mod-tools/${Uri.encodeComponent(widget.communityId)}',
+                                      '/moderator-tools/${Uri.encodeComponent(widget.communityId)}',
                                     );
                                   },
                                   style: OutlinedButton.styleFrom(
@@ -178,46 +182,39 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
-                                            content: Text(
-                                                'You have left ${community.name}'),
-                                          ),
+                                              content: Text(
+                                                  'You have left ${community.name}')),
                                         );
                                       }
                                     } else {
                                       if (!community.requiresVerification) {
                                         await communityController
                                             .joinCommunityImmediately(
-                                          community,
-                                          user.uid,
-                                        );
+                                                community, user.uid);
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
-                                            content: Text(
-                                                'You have joined ${community.name}'),
-                                          ),
+                                              content: Text(
+                                                  'You have joined ${community.name}')),
                                         );
                                       } else {
-                                        Get.to(
-                                          () => JoinCommunityVerificationScreen(
-                                            community: community,
-                                          ),
-                                        );
+                                        Get.to(() =>
+                                            JoinCommunityVerificationScreen(
+                                                community: community));
                                       }
                                     }
                                   },
                                   style: OutlinedButton.styleFrom(
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
+                                        borderRadius:
+                                            BorderRadius.circular(20)),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 25),
                                   ),
                                   child: Text(
-                                    community.members.contains(user.uid)
-                                        ? 'Joined'
-                                        : 'Join',
-                                  ),
+                                      community.members.contains(user.uid)
+                                          ? 'Joined'
+                                          : 'Join'),
                                 ),
                             ],
                           ),
@@ -230,17 +227,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 value: selectedFilter,
                                 items: const [
                                   DropdownMenuItem(
-                                    value: PostFilter.all,
-                                    child: Text("All Posts"),
-                                  ),
+                                      value: PostFilter.all,
+                                      child: Text("All Posts")),
                                   DropdownMenuItem(
-                                    value: PostFilter.elections,
-                                    child: Text("Elections"),
-                                  ),
+                                      value: PostFilter.elections,
+                                      child: Text("Elections")),
                                   DropdownMenuItem(
-                                    value: PostFilter.campaign,
-                                    child: Text("Campaigns"),
-                                  ),
+                                      value: PostFilter.campaign,
+                                      child: Text("Campaigns")),
                                 ],
                                 onChanged: (value) {
                                   if (value != null) {
@@ -272,57 +266,65 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ),
               ),
             ],
-            body: community.members.contains(user.uid)
-                ? StreamBuilder<List<Post>>(
-                    stream: communityController
-                        .getCommunityPosts(widget.communityId),
-                    builder: (ctx, postSnapshot) {
-                      if (postSnapshot.hasError) {
-                        return ErrorText(
-                          error: postSnapshot.error.toString(),
+            body: RefreshIndicator(
+              onRefresh: _refresh,
+              child: community.members.contains(user.uid)
+                  ? StreamBuilder<List<Post>>(
+                      stream: communityController
+                          .getCommunityPosts(widget.communityId),
+                      builder: (ctx, postSnapshot) {
+                        if (postSnapshot.hasError) {
+                          return ErrorText(
+                              error: postSnapshot.error.toString());
+                        }
+                        if (!postSnapshot.hasData) return const Loader();
+
+                        final posts = postSnapshot.data!;
+                        final filtered = switch (selectedFilter) {
+                          PostFilter.campaign =>
+                            posts.where((p) => p.type == 'carousel2').toList(),
+                          PostFilter.elections =>
+                            posts.where((p) => p.type == 'carousel').toList(),
+                          _ => posts,
+                        };
+
+                        if (filtered.isEmpty) {
+                          return const Center(
+                              child: Text("No posts available."));
+                        }
+
+                        return ListView.builder(
+                          itemCount: filtered.length,
+                          itemBuilder: (_, i) {
+                            final post = filtered[i];
+
+                            if (user.blockedUsers.contains(post.uid)) {
+                              return const SizedBox.shrink();
+                            }
+
+                            return PostCard(post: post);
+                          },
                         );
-                      }
-                      if (!postSnapshot.hasData) return const Loader();
-
-                      final posts = postSnapshot.data!;
-                      final filtered = switch (selectedFilter) {
-                        PostFilter.campaign =>
-                          posts.where((p) => p.type == 'carousel2').toList(),
-                        PostFilter.elections =>
-                          posts.where((p) => p.type == 'carousel').toList(),
-                        _ => posts,
-                      };
-
-                      if (filtered.isEmpty) {
-                        return const Center(
-                          child: Text("No posts available."),
-                        );
-                      }
-                      return ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) {
-                          final post = filtered[i];
-
-                          // Filter out posts from blocked users
-                          if (user.blockedUsers.contains(post.uid)) {
-                            return const SizedBox.shrink();
-                          }
-
-                          return PostCard(post: post);
-                        },
-                      );
-                    },
-                  )
-                : Center(
-                    child: Text(
-                      community.pendingMembers.contains(user.uid)
-                          ? 'Your join request is pending approval.'
-                          : 'Join the community to view posts.',
+                      },
+                    )
+                  : Center(
+                      child: Text(
+                        community.pendingMembers.contains(user.uid)
+                            ? 'Your join request is pending approval.'
+                            : 'Join the community to view posts.',
+                      ),
                     ),
-                  ),
+            ),
           );
         },
       ),
     );
+  }
+
+  ImageProvider _getImageProvider(String imageUrl) {
+    if (imageUrl.startsWith('http')) {
+      return NetworkImage(imageUrl);
+    }
+    return AssetImage(imageUrl) as ImageProvider;
   }
 }

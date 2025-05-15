@@ -205,6 +205,20 @@ class CommunityController extends GetxController {
     }
   }
 
+  Future<void> refreshUserCommunities() async {
+    final uid = AuthController.to.userModel.value?.uid;
+    if (uid == null) return;
+    try {
+      isLoading.value = true;
+      final communities = await communityRepository.getUserCommunitiesOnce(uid);
+      userCommunities.assignAll(communities);
+    } catch (e) {
+      print('Failed to refresh communities: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   /// When moderator accepts a join request, send a notification to the user.
   Future<void> acceptJoinRequest(
       String communityId, String userId, BuildContext context) async {

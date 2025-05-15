@@ -148,7 +148,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Build the communities view.
+  // Async function to refresh the community list.
+  Future<void> _refreshCommunities() async {
+    await Get.find<CommunityController>().refreshUserCommunities();
+    await Future.delayed(const Duration(seconds: 2));
+  }
+
+  // Build the communities view wrapped with RefreshIndicator.
   Widget buildCommunities() {
     final communityController = Get.find<CommunityController>();
     return StreamBuilder<List>(
@@ -164,12 +170,16 @@ class _HomeScreenState extends State<HomeScreen> {
         if (communities.isEmpty) {
           return const Center(child: Text('No community found.'));
         }
-        return ListView.builder(
-          itemCount: communities.length,
-          itemBuilder: (context, index) {
-            final community = communities[index];
-            return CommunityCard(community: community);
-          },
+        return RefreshIndicator(
+          onRefresh: _refreshCommunities,
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: communities.length,
+            itemBuilder: (context, index) {
+              final community = communities[index];
+              return CommunityCard(community: community);
+            },
+          ),
         );
       },
     );

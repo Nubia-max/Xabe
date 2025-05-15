@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,14 +7,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get/get.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 import 'package:xabe/features/user_profile/controller/user_profile_controller.dart';
-import 'package:xabe/core/utils/utils.dart';
+import 'package:xabe/core/common/error_text.dart';
+import 'package:xabe/core/common/loader.dart';
 import 'package:xabe/core/post_card.dart';
-
-import '../../../core/common/error_text.dart';
-import '../../../core/common/loader.dart';
 import '../../../models/post_model.dart';
 import '../../auth/repository/auth_repository.dart';
 
@@ -72,12 +71,16 @@ class UserProfileScreen extends StatelessWidget {
     Get.snackbar('Blocked', 'The user has been blocked successfully.');
   }
 
+  Future<void> _handleRefresh(
+      UserProfileController userProfileController) async {
+    // Replace with your real refresh logic if needed
+    await Future.delayed(const Duration(seconds: 2));
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = Get.find<AuthController>().userModel.value!;
     final userProfileController = Get.find<UserProfileController>();
-    final scrollController = ScrollController();
-    bool hasJumped = false;
 
     return StreamBuilder(
       stream: userProfileController.getUserData(uid),
@@ -93,140 +96,113 @@ class UserProfileScreen extends StatelessWidget {
         }
 
         return Scaffold(
-          body: NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [
-              SliverAppBar(
-                expandedHeight: 250,
-                floating: true,
-                snap: true,
-                flexibleSpace: Stack(
-                  children: [
-                    Container(
-                      alignment: Alignment.bottomLeft,
-                      padding: currentUser.uid == uid
-                          ? const EdgeInsets.all(20).copyWith(bottom: 70)
-                          : const EdgeInsets.all(20),
-                      child: kIsWeb
-                          ? CachedWebImage(
-                              imageUrl: user.profilePic,
-                              fit: BoxFit.cover,
-                            )
-                          : CircleAvatar(
-                              backgroundImage:
-                                  getImageProvider(user.profilePic),
-                              radius: 45,
-                            ),
-                    ),
-                    Container(
-                      alignment: Alignment.bottomLeft,
-                      padding: const EdgeInsets.all(20),
-                      child: currentUser.uid == uid
-                          ? OutlinedButton(
-                              onPressed: () => navigateToEditUser(context),
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 25),
-                              ),
-                              child: const Text("Edit Profile"),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    Text(
-                      'u/${user.name}',
-                      style: const TextStyle(
-                          fontSize: 19, fontWeight: FontWeight.bold),
-                    ),
-                    if (user.bio.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          user.bio,
-                          style:
-                              const TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
-                      ),
-                    const SizedBox(height: 10),
-                    const Divider(thickness: 2),
-                  ]),
-                ),
-              ),
-              if (currentUser.uid != uid)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      ElevatedButton(
-                        onPressed: () =>
-                            _showConfirmationDialog(context, user.uid),
-                        child: const Text("Block User"),
-                      ),
-                    ]),
-                  ),
-                ),
-            ],
-            body: StreamBuilder<List<Post>>(
+          body: RefreshIndicator(
+            onRefresh: () => _handleRefresh(userProfileController),
+            child: StreamBuilder<List<Post>>(
               stream: userProfileController.getUserPosts(uid),
               builder: (context, snapshotPosts) {
                 if (snapshotPosts.hasError) {
                   return ErrorText(error: snapshotPosts.error.toString());
                 }
-
                 if (!snapshotPosts.hasData) return const Loader();
+
                 final posts = snapshotPosts.data!;
-
-                if (posts.isEmpty) {
-                  return const Center(child: Text('No posts available.'));
-                }
-
-                // Extract the jumpToPost if any
                 final jumpPost =
                     posts.firstWhereOrNull((p) => p.id == jumpToPostId);
                 final remainingPosts =
                     posts.where((p) => p.id != jumpToPostId).toList();
 
-                return ListView.builder(
-                  controller: scrollController,
-                  itemCount: jumpPost == null
-                      ? remainingPosts.length
-                      : remainingPosts.length + 1,
-                  itemBuilder: (context, index) {
-                    // Show the jumpToPost first if available
-                    if (jumpPost != null && index == 0) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text("🚨 Flagged Post",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red)),
-                          ),
-                          PostCard(post: jumpPost),
-                          const Divider(thickness: 1),
-                        ],
-                      );
-                    }
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      floating: false,
+                      snap: false,
+                      expandedHeight: 250,
+                      flexibleSpace: FlexibleSpaceBar(
+                        title: Text('u/${user.name}'),
+                        background: kIsWeb
+                            ? CachedWebImage(
+                                imageUrl: user.profilePic,
+                                fit: BoxFit.cover,
+                              )
+                            : CircleAvatar(
+                                backgroundImage:
+                                    getImageProvider(user.profilePic),
+                                radius: 45,
+                              ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate(
+                          [
+                            if (user.bio.isNotEmpty)
+                              Text(user.bio,
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.grey)),
+                            const SizedBox(height: 10),
+                            const Divider(thickness: 2),
+                            if (currentUser.uid == uid)
+                              OutlinedButton(
+                                onPressed: () => navigateToEditUser(context),
+                                child: const Text('Edit Profile'),
+                              ),
+                            if (currentUser.uid != uid)
+                              ElevatedButton(
+                                onPressed: () =>
+                                    _showConfirmationDialog(context, user.uid),
+                                child: const Text("Block User"),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (posts.isEmpty)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Text('No posts available.'),
+                        ),
+                      )
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            if (jumpPost != null && index == 0) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text("🚨 Flagged Post",
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.red)),
+                                  ),
+                                  PostCard(post: jumpPost),
+                                  const Divider(thickness: 1),
+                                ],
+                              );
+                            }
 
-                    final adjustedIndex = jumpPost == null ? index : index - 1;
-                    final post = remainingPosts[adjustedIndex];
+                            final adjustedIndex =
+                                jumpPost == null ? index : index - 1;
+                            final post = remainingPosts[adjustedIndex];
 
-                    if (currentUser.blockedUsers.contains(post.uid)) {
-                      return const SizedBox.shrink();
-                    }
+                            if (currentUser.blockedUsers.contains(post.uid)) {
+                              return const SizedBox.shrink();
+                            }
 
-                    return PostCard(post: post);
-                  },
+                            return PostCard(post: post);
+                          },
+                          childCount: jumpPost == null
+                              ? remainingPosts.length
+                              : remainingPosts.length + 1,
+                        ),
+                      ),
+                  ],
                 );
               },
             ),
@@ -305,17 +281,5 @@ class _CachedWebImageState extends State<CachedWebImage> {
       return Image.memory(_imageBytes!, fit: widget.fit);
     }
     return const SizedBox.shrink();
-  }
-}
-
-ImageProvider getImageProvider(String imageUrl) {
-  if (imageUrl.startsWith('http')) {
-    if (kIsWeb) {
-      return NetworkImage(imageUrl);
-    } else {
-      return CachedNetworkImageProvider(imageUrl);
-    }
-  } else {
-    return AssetImage(imageUrl);
   }
 }

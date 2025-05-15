@@ -1,0 +1,2 @@
+/Users/wikiwoo/StudioProjects/xabe/android/app/.cxx/RelWithDebInfo/1m1m5861/x86/CMakeFiles/edit_cache.dir
+/Users/wikiwoo/StudioProjects/xabe/android/app/.cxx/RelWithDebInfo/1m1m5861/x86/CMakeFiles/rebuild_cache.dir

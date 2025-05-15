@@ -63,6 +63,19 @@ class CommunityRepository {
     }
   }
 
+  Future<List<Community>> getUserCommunitiesOnce(String uid) async {
+    try {
+      final snapshot = await _firestore
+          .collection('communities')
+          .where('members', arrayContains: uid)
+          .get();
+
+      return snapshot.docs.map((doc) => Community.fromMap(doc.data())).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch communities: $e');
+    }
+  }
+
   // Edit community using UUID
   FutureVoid editCommunity(Community community) async {
     try {
