@@ -791,7 +791,7 @@ class _PostCardState extends State<PostCard>
                                       Transform.translate(
                                         offset: const Offset(-40, -25),
                                         child: Text(
-                                          ": ${widget.post.imageVotes[_currentPage.toString()] ?? 0}",
+                                          ": ${widget.post.imageVotes.values.fold(0, (previousValue, element) => previousValue + element)}",
                                           style: const TextStyle(fontSize: 13),
                                         ),
                                       ),
