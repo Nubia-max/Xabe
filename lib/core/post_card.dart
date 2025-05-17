@@ -824,7 +824,10 @@ class _PostCardState extends State<PostCard>
                     });
                   },
                   child: GestureDetector(
-                    onTap: widget.post.showLiveResults
+                    onTap: (widget.post.showLiveResults ||
+                            (widget.post.electionEndTime != null &&
+                                DateTime.now()
+                                    .isAfter(widget.post.electionEndTime!)))
                         ? () {
                             Get.toNamed('/graph/${widget.post.id}');
                           }
