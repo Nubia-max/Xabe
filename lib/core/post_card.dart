@@ -5,7 +5,6 @@ import 'package:xabe/core/utils/utils.dart';
 import '../features/auth/controller/auth_controller.dart';
 import '../features/community/controller/community_controller.dart';
 import '../features/posts/controller/post_controller.dart';
-import '../features/posts/widgets/block_button.dart';
 import '../features/posts/widgets/dot_indicator.dart';
 import '../features/posts/widgets/election_time.dart';
 import '../features/posts/widgets/flag_button.dart';
@@ -18,6 +17,7 @@ import '../theme/pallete.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
+
   const PostCard({super.key, required this.post});
 
   @override
@@ -38,6 +38,7 @@ class _PostCardState extends State<PostCard>
   bool _showViewResults = false;
 
   late final PageController _pageController;
+  late bool _showLive;
 
   // Static cache for usernames to avoid repeat network calls.
   static final Map<String, String> _cachedUsernames = {};
@@ -69,6 +70,7 @@ class _PostCardState extends State<PostCard>
   @override
   void initState() {
     super.initState();
+    _showLive = widget.post.showLiveResults;
     _pageController =
         PageController(viewportFraction: 1, initialPage: _currentPage);
     _lottieController =
@@ -363,10 +365,76 @@ class _PostCardState extends State<PostCard>
                                             ),
                                           ),
                                         if (widget.post.uid == user.uid)
-                                          IconButton(
-                                            onPressed: confirmDeletePost,
-                                            icon: Icon(Icons.delete,
-                                                color: Pallete.redColor),
+                                          PopupMenuButton<String>(
+                                            icon: const Icon(Icons.more_vert,
+                                                color: Colors.grey),
+                                            onSelected: (value) async {
+                                              if (value ==
+                                                  'toggleLiveProgress') {
+                                                final newValue = !_showLive;
+
+                                                final confirm =
+                                                    await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (context) =>
+                                                      AlertDialog(
+                                                    title: Text(newValue
+                                                        ? 'Enable Live Progress?'
+                                                        : 'Disable Live Progress?'),
+                                                    content: Text(
+                                                      newValue
+                                                          ? 'This will show live election results to everyone before the election ends.'
+                                                          : 'This will hide live election results until the election ends.',
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                                context, false),
+                                                        child: const Text(
+                                                            'Cancel'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(
+                                                                context, true),
+                                                        child: const Text(
+                                                            'Confirm'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+
+                                                if (confirm == true) {
+                                                  await Get.find<
+                                                          PostController>()
+                                                      .updateShowLiveResults(
+                                                          widget.post.id,
+                                                          newValue);
+
+                                                  setState(() {
+                                                    _showLive = newValue;
+                                                  });
+                                                }
+                                              } else if (value ==
+                                                  'deletePost') {
+                                                confirmDeletePost();
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              PopupMenuItem(
+                                                value: 'toggleLiveProgress',
+                                                child: Text(
+                                                  widget.post.showLiveResults
+                                                      ? 'Hide Live Progress'
+                                                      : 'Show Live Progress',
+                                                ),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 'deletePost',
+                                                child: Text('Delete Post'),
+                                              ),
+                                            ],
                                           ),
                                         FlagButton(
                                           contentId: widget.post.id,
@@ -756,9 +824,11 @@ class _PostCardState extends State<PostCard>
                     });
                   },
                   child: GestureDetector(
-                    onTap: () {
-                      Get.toNamed('/graph/${widget.post.id}');
-                    },
+                    onTap: widget.post.showLiveResults
+                        ? () {
+                            Get.toNamed('/graph/${widget.post.id}');
+                          }
+                        : null,
                     child: Stack(
                       children: [
                         Container(

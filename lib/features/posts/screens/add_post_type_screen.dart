@@ -38,6 +38,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
 
   // Flag to track whether the share button has been clicked
   bool isSharing = false;
+  bool showLiveProgress = true;
 
   @override
   void dispose() {
@@ -312,6 +313,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
     final titleText = titleController.text.trim();
     final captionText = captionController.text.trim();
     final postController = Get.find<PostController>();
+
     if (!SimpleFilter.isClean(titleText)) {
       showSnackBar(context, 'Your title contains disallowed words.');
       setState(() => isSharing = false);
@@ -381,6 +383,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         taggedUsers: transformedTags, // ✅ updated format
         caption: captionText,
         electionEndTime: electionEndTime,
+        showLiveResults: showLiveProgress,
       )
           .then((_) {
         setState(() {
@@ -398,7 +401,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         files: carouselImages,
         taggedUsers: <List<Map<String, dynamic>>>[], // ✅ adjusted type
         isCarousel2: true,
-        caption: captionText,
+        caption: captionText, showLiveResults: showLiveProgress,
       )
           .then((_) {
         setState(() {
@@ -469,7 +472,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
             child: Padding(
               padding: EdgeInsets.all(24.0),
               child: Text(
-                "🚫 You are banned from posting in this community.\n\nPlease contact the moderator if you think this is a mistake.",
+                "🚫 You are banned from posting in this community.\nPlease contact the moderator if you think this is a mistake.",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16, color: Colors.red),
               ),
@@ -486,9 +489,6 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Everything you already had (TextFields, Community picker, Image pickers, etc.)
-              // ⬇️ Keep all this as-is after this point ⬇️
-
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
@@ -565,7 +565,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              if (isTypeCarousel)
+              if (isTypeCarousel) ...[
                 Row(
                   children: [
                     Expanded(
@@ -582,6 +582,42 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Show Results',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<bool>(
+                        title: const Text('Live Progress'),
+                        value: true,
+                        groupValue: showLiveProgress,
+                        onChanged: (value) {
+                          setState(() {
+                            showLiveProgress = value!;
+                          });
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<bool>(
+                        title: const Text('After Election Ends'),
+                        value: false,
+                        groupValue: showLiveProgress,
+                        onChanged: (value) {
+                          setState(() {
+                            showLiveProgress = value!;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
               if (isTypeCarousel2) ...[
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
@@ -604,8 +640,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                       )
                     : buildEmptyImageSelector(),
               ],
-              if (isTypeCarousel) const SizedBox(height: 20),
-              if (isTypeCarousel)
+              if (isTypeCarousel) ...[
+                const SizedBox(height: 20),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -680,6 +716,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                         : buildEmptyImageSelector(),
                   ],
                 ),
+              ],
             ],
           ),
         );

@@ -22,6 +22,7 @@ class Post {
   final DateTime? electionEndTime;
   final List<String> taggedNames;
   final List<String> taggedUids;
+  final bool showLiveResults;
 
   Post({
     required this.id,
@@ -36,6 +37,7 @@ class Post {
     required this.uid,
     required this.type,
     required this.createdAt,
+    required this.showLiveResults,
     List<String>? imageUrls,
     Map<String, int>? userVotes,
     List<String>? taggedUsers,
@@ -76,6 +78,7 @@ class Post {
     int? likes,
     List<String>? likedBy,
     DateTime? electionEndTime,
+    bool? showLiveResults,
   }) {
     return Post(
       id: id ?? this.id,
@@ -99,6 +102,7 @@ class Post {
       electionEndTime: electionEndTime ?? this.electionEndTime,
       taggedNames: taggedNames ?? this.taggedNames,
       taggedUids: taggedUids ?? this.taggedUids,
+      showLiveResults: showLiveResults ?? this.showLiveResults,
     );
   }
 
@@ -125,6 +129,7 @@ class Post {
       'electionEndTime': electionEndTime?.millisecondsSinceEpoch,
       'taggedNames': taggedNames,
       'taggedUids': taggedUids,
+      'showLiveResults': showLiveResults,
     };
   }
 
@@ -157,6 +162,7 @@ class Post {
       electionEndTime: map['electionEndTime'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['electionEndTime'] as int)
           : null,
+      showLiveResults: map['showLiveResults'] as bool? ?? false,
     );
   }
 
@@ -180,6 +186,7 @@ class Post {
         mapEquals(other.userVotes, userVotes) &&
         listEquals(other.taggedUsers, taggedUsers) &&
         listEquals(other.likedBy, likedBy) &&
+        other.showLiveResults == showLiveResults &&
         other.electionEndTime == electionEndTime;
   }
 
@@ -201,6 +208,7 @@ class Post {
         userVotes.hashCode ^
         taggedUsers.hashCode ^
         likedBy.hashCode ^
+        showLiveResults.hashCode ^
         electionEndTime.hashCode;
   }
 }

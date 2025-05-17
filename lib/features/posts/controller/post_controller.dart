@@ -148,6 +148,7 @@ class PostController extends GetxController {
     required Community selectedCommunity,
     required List<dynamic> files,
     required List<List<Map<String, dynamic>>> taggedUsers,
+    required bool showLiveResults,
     bool isCarousel2 = false,
     DateTime? electionEndTime,
   }) async {
@@ -255,6 +256,7 @@ class PostController extends GetxController {
       taggedUsers: flatRawTags, // for backward compatibility
       description: caption,
       electionEndTime: isCarousel2 ? null : electionEndTime!,
+
       likedBy: [],
       userVotes: {},
       imageVotes: {},
@@ -262,6 +264,7 @@ class PostController extends GetxController {
       communityId: selectedCommunity.id,
       taggedNames: taggedNames,
       taggedUids: taggedUids,
+      showLiveResults: showLiveResults,
     );
 
     final res = await _postRepository.addPost(post);
@@ -357,6 +360,7 @@ class PostController extends GetxController {
           taggedUsers: [],
           electionEndTime: DateTime.now(),
           communityId: selectedCommunity.id,
+          showLiveResults: false,
         );
 
         final res = await _postRepository.addPost(post);
@@ -451,6 +455,18 @@ class PostController extends GetxController {
     return snapshot.docs
         .map((doc) => Post.fromMap(doc.data() as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<void> updateShowLiveResults(String postId, bool showLive) async {
+    try {
+      await _postRepository.updatePostField(
+        postId: postId,
+        field: 'showLiveResults',
+        value: showLive,
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update live progress status.');
+    }
   }
 
   /// Helper to convert Uint8List to File.

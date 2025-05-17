@@ -100,6 +100,14 @@ class PostRepository {
     }
   }
 
+  Future<void> updatePostField({
+    required String postId,
+    required String field,
+    required dynamic value,
+  }) async {
+    await _firestore.collection('posts').doc(postId).update({field: value});
+  }
+
   Future<Either<Failure, void>> addComment(Comment comment) async {
     try {
       await _comments.doc(comment.id).set(comment.toMap());

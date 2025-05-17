@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xabe/theme/pallete.dart';
 import '../../auth/controller/auth_controller.dart';
-import '../../auth/repository/auth_repository.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

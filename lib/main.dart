@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,9 +10,7 @@ import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_strategy/url_strategy.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
-import 'core/terms_screen.dart';
 import 'router.dart';
 import 'firebase_options.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
