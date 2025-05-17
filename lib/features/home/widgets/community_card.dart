@@ -62,6 +62,25 @@ class CommunityCard extends StatelessWidget {
                           color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
+                      if (community.communityType == 'premium') ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.amber[700],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Premium',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_horiz),
                         onSelected: (value) {
