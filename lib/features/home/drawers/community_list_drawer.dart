@@ -63,10 +63,11 @@ class CommunityListDrawer extends StatelessWidget {
                           title: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                community.name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
+                              Expanded(
+                                child: Text(
+                                  community.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               if (community.communityType == 'premium') ...[
                                 const SizedBox(width: 6),
