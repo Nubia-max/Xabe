@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:xabe/core/utils/utils.dart';
 
@@ -155,9 +156,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                       TextField(
                         controller: nameController,
+                        maxLength: 21,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(21),
+                        ],
                         decoration: InputDecoration(
                           filled: true,
                           hintText: 'Name',
+                          counterText: '', // hides the built-in counter
                           focusedBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: Colors.blue),
                             borderRadius: BorderRadius.circular(10),

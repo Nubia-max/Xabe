@@ -124,6 +124,25 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
+                              if (community.communityType == 'premium') ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber[700],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Premium',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                               if (!isGuest && isMod)
                                 OutlinedButton(
                                   onPressed: () {
@@ -145,6 +164,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   onPressed: () async {
                                     final isMember =
                                         community.members.contains(user.uid);
+                                    final isPending = community.pendingMembers
+                                        .contains(user.uid);
 
                                     if (isMember) {
                                       final shouldLeave =
@@ -216,7 +237,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                   child: Text(
                                     community.members.contains(user.uid)
                                         ? 'Joined'
-                                        : 'Join',
+                                        : community.pendingMembers
+                                                .contains(user.uid)
+                                            ? 'Pending'
+                                            : 'Join',
                                   ),
                                 ),
                             ],

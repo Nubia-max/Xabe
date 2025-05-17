@@ -13,6 +13,7 @@ class Community {
   final String electionThumbnailUrl;
   final bool requiresVerification;
   final List<String> bannedUsers;
+  final String communityType;
 
   Community({
     required this.id,
@@ -27,6 +28,7 @@ class Community {
     this.electionThumbnailUrl = '',
     required this.requiresVerification,
     this.bannedUsers = const [],
+    this.communityType = 'regular',
   });
 
   Community copyWith({
@@ -41,6 +43,9 @@ class Community {
     String? campaignThumbnailUrl,
     String? electionThumbnailUrl,
     bool? requiresVerification,
+    List<String>? pendingMembers,
+    List<String>? bannedUsers,
+    String? communityType,
   }) {
     return Community(
       id: id ?? this.id,
@@ -49,11 +54,14 @@ class Community {
       bio: bio ?? this.bio,
       members: members ?? this.members,
       mods: mods ?? this.mods,
-      creatorUid: creatorUid ?? this.creatorUid, // ← NEW
+      creatorUid: creatorUid ?? this.creatorUid,
       campaignThumbnailUrl: campaignThumbnailUrl ?? this.campaignThumbnailUrl,
       electionThumbnailUrl: electionThumbnailUrl ?? this.electionThumbnailUrl,
-      pendingMembers: pendingMembers,
       requiresVerification: requiresVerification ?? this.requiresVerification,
+      pendingMembers: pendingMembers ?? this.pendingMembers,
+      bannedUsers: bannedUsers ?? this.bannedUsers,
+      communityType:
+          communityType ?? this.communityType, // Use provided or current
     );
   }
 
@@ -72,6 +80,7 @@ class Community {
       'electionThumbnailUrl': electionThumbnailUrl,
       'requiresVerification': requiresVerification,
       'bannedUsers': bannedUsers,
+      'communityType': communityType,
     };
   }
 
@@ -89,6 +98,7 @@ class Community {
       electionThumbnailUrl: map['electionThumbnailUrl'] as String? ?? '',
       requiresVerification: map['requiresVerification'] ?? true,
       bannedUsers: List<String>.from(map['bannedUsers'] ?? []),
+      communityType: map['communityType'] as String? ?? 'regular',
     );
   }
 
@@ -109,7 +119,8 @@ class Community {
         listEquals(other.members, members) &&
         listEquals(other.mods, mods) &&
         other.campaignThumbnailUrl == campaignThumbnailUrl &&
-        other.electionThumbnailUrl == electionThumbnailUrl;
+        other.electionThumbnailUrl == electionThumbnailUrl &&
+        other.communityType == communityType;
   }
 
   @override
@@ -121,6 +132,7 @@ class Community {
         members.hashCode ^
         mods.hashCode ^
         campaignThumbnailUrl.hashCode ^
-        electionThumbnailUrl.hashCode;
+        electionThumbnailUrl.hashCode ^
+        communityType.hashCode;
   }
 }

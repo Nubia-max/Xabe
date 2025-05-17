@@ -40,21 +40,31 @@ class UserProfileController extends GetxController {
   Future<void> editCommunity({
     File? profileFile,
     required BuildContext context,
-    required String name,
+    required String name, // new username to update
     required String bio,
   }) async {
     isLoading.value = true;
-    // Retrieve the current user from AuthController.
     UserModel user = Get.find<AuthController>().userModel.value!;
 
-    // Helper function to handle file uploads.
+    // Check if the new username is taken by another user
+    final existingUsers = await _userProfileRepository.searchUsers(name).first;
+
+    final usernameTakenByOther = existingUsers.any(
+        (u) => u.name.toLowerCase() == name.toLowerCase() && u.uid != user.uid);
+
+    if (usernameTakenByOther) {
+      isLoading.value = false;
+      showSnackBar(context, 'This username is already taken.');
+      return;
+    }
+
     Future<void> handleFileUpload(File? file, String path) async {
       if (file == null) return;
       final compressedBytes = await compressImage(file);
       final res = await _storageRepository.storeFile(
         path: path,
         id: user.uid,
-        file: compressedBytes, // Now handles Uint8List
+        file: compressedBytes,
       );
       res.fold(
         (l) => showSnackBar(context, l.message),
@@ -72,12 +82,13 @@ class UserProfileController extends GetxController {
 
     // Update the user's name and bio.
     user = user.copyWith(name: name, bio: bio);
+
     final res = await _userProfileRepository.editProfile(user);
     isLoading.value = false;
+
     res.fold(
       (l) => showSnackBar(context, l.message),
       (r) {
-        // Update the current user in AuthController.
         Get.find<AuthController>().updateUser(user);
         Get.back();
       },

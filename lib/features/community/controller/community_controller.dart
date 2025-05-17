@@ -118,11 +118,27 @@ class CommunityController extends GetxController {
   }
 
   // Create community method
-  Future<void> createCommunity(String name, String bio,
-      bool requiresVerification, BuildContext context) async {
+  Future<void> createCommunity(
+    String name,
+    String bio,
+    bool requiresVerification,
+    BuildContext context, {
+    String communityType = 'regular', // new optional parameter with default
+  }) async {
     isLoading.value = true;
+    // Check if community with this name already exists
+    final existingCommunities =
+        await communityRepository.searchCommunity(name).first;
+
+    if (existingCommunities
+        .any((c) => c.name.toLowerCase() == name.toLowerCase())) {
+      isLoading.value = false;
+      showSnackBar(context, 'Community with this name already exists.');
+      return;
+    }
     final String uid = AuthController.to.userModel.value?.uid ?? '';
     final String communityId = Uuid().v4();
+
     Community community = Community(
       id: communityId,
       name: name,
@@ -137,6 +153,7 @@ class CommunityController extends GetxController {
 
     final res = await communityRepository.createCommunity(community);
     isLoading.value = false;
+
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) {
@@ -290,8 +307,23 @@ class CommunityController extends GetxController {
     required Community community,
     required String bio,
     required bool requiresVerification,
+    required String newName, // pass the new name here
   }) async {
     isLoading.value = true;
+
+    // Check if newName is taken by another community
+    final existingCommunities =
+        await communityRepository.searchCommunity(newName).first;
+
+    final nameTakenByOther = existingCommunities.any((c) =>
+        c.name.toLowerCase() == newName.toLowerCase() && c.id != community.id);
+
+    if (nameTakenByOther) {
+      isLoading.value = false;
+      showSnackBar(context, 'Another community with this name already exists.');
+      return;
+    }
+
     if (profileFile != null) {
       final res = await storageRepository.storeFile(
         path: 'communities/profile',
@@ -314,16 +346,18 @@ class CommunityController extends GetxController {
         (downloadUrl) => community = community.copyWith(banner: downloadUrl),
       );
     }
-    // Update mutable fields: bio and name. Note that copyWith preserves the community.id.
+
+    // Update mutable fields including the new name
     community = community.copyWith(
       bio: bio,
-      name: community
-          .name, // The new community name should already be set via copyWith in your edit screen.
+      name: newName, // use the passed newName here
+      requiresVerification: requiresVerification,
     );
 
     final res = await communityRepository.editCommunity(community);
 
     isLoading.value = false;
+
     res.fold(
       (failure) => showSnackBar(context, failure.message),
       (_) => Get.back(),

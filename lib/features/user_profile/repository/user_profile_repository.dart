@@ -28,6 +28,15 @@ class UserProfileRepository {
     }
   }
 
+  Stream<List<UserModel>> searchUsers(String username) {
+    return _firestore
+        .collection('users')
+        .where('name', isEqualTo: username)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => UserModel.fromMap(doc.data())).toList());
+  }
+
   Stream<UserModel> getUserData(String uid) {
     return _users.doc(uid).snapshots().map((snapshot) {
       if (snapshot.exists && snapshot.data() != null) {

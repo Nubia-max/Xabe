@@ -19,6 +19,9 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final TextEditingController bioController = TextEditingController();
   bool requiresVerification = true;
 
+  // New: Community type state
+  String _communityType = 'regular';
+
   @override
   void dispose() {
     communityNameController.dispose();
@@ -37,6 +40,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       bioController.text.trim(),
       requiresVerification,
       context,
+      communityType: _communityType, // Pass the new community type here
     );
   }
 
@@ -108,6 +112,35 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                       ),
                       maxLines: 3,
                     ),
+
+                    // New: Community Type Selection
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Community Type',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Regular'),
+                      value: 'regular',
+                      groupValue: _communityType,
+                      onChanged: (value) {
+                        setState(() {
+                          _communityType = value!;
+                        });
+                      },
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Premium'),
+                      value: 'premium',
+                      groupValue: _communityType,
+                      onChanged: (value) {
+                        setState(() {
+                          _communityType = value!;
+                        });
+                      },
+                    ),
+
                     const SizedBox(height: 20),
                     // Require Verification Switch
                     Row(

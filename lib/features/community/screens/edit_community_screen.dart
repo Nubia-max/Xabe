@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:xabe/core/common/error_text.dart';
 import 'package:xabe/core/common/loader.dart';
@@ -89,6 +90,7 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
       community: updatedCommunity,
       bio: bioController.text.trim(),
       requiresVerification: requiresVerification!,
+      newName: updatedCommunity.name, // Pass the new community name here
     );
   }
 
@@ -201,25 +203,32 @@ class _EditCommunityScreenState extends State<EditCommunityScreen> {
                         const SizedBox(height: 8),
                         TextField(
                           controller: communityNameController,
+                          maxLength: 21,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(21),
+                          ],
                           decoration: InputDecoration(
                             filled: true,
                             hintText: 'Enter Community Name',
+                            // Hide the counter text if you don’t want to show "0/21"
+                            counterText: '',
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color:
-                                      isDarkMode ? Colors.white : Colors.blue),
+                                color: isDarkMode ? Colors.white : Colors.blue,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.all(18),
                             hintStyle: TextStyle(
-                                color:
-                                    isDarkMode ? Colors.white70 : Colors.black),
+                              color: isDarkMode ? Colors.white70 : Colors.black,
+                            ),
                             fillColor: isDarkMode
                                 ? Colors.grey[800]
                                 : Colors.grey[100],
                           ),
                         ),
+
                         const SizedBox(height: 20),
                         // Bio field.
                         const Text(
