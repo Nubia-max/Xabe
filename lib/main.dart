@@ -7,10 +7,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_strategy/url_strategy.dart';
 
+import 'features/home/screens/home_screen.dart';
+import 'features/premium/premium_election_screen.dart';
 import 'router.dart';
 import 'firebase_options.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
@@ -28,28 +29,8 @@ import 'package:xabe/features/user_profile/repository/user_profile_repository.da
 import 'package:xabe/features/notifications/notification_controller.dart';
 import 'package:xabe/features/notifications/notification_repository.dart';
 
-const String _androidBannerAdUnitId = 'ca-app-pub-8352296755977335/6184022554';
-const String _iosBannerAdUnitId = 'ca-app-pub-8352296755977335/3919625753';
-
-String get bannerAdUnitId {
-  if (kIsWeb) throw UnsupportedError('Ads are not supported on web');
-  switch (defaultTargetPlatform) {
-    case TargetPlatform.android:
-      return _androidBannerAdUnitId;
-    case TargetPlatform.iOS:
-      return _iosBannerAdUnitId;
-    default:
-      throw UnsupportedError('Unsupported platform for ads');
-  }
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Google Mobile Ads SDK only for mobile platforms (Android/iOS)
-  if (!kIsWeb) {
-    await MobileAds.instance.initialize();
-  }
 
   // Initialize notifications
   NotiService().initNotification();
@@ -126,39 +107,38 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late final BannerAd _bannerAd;
-  bool _isAdLoaded = false;
-  bool _agreed = false;
+  late PageController _pageController;
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    HomeScreen(),
+    PremiumElectionScreen(),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadAd();
-  }
-
-  void _loadAd() {
-    if (kIsWeb) return;
-
-    _bannerAd = BannerAd(
-      size: AdSize.banner,
-      adUnitId: bannerAdUnitId,
-      listener: BannerAdListener(
-        onAdLoaded: (_) => setState(() => _isAdLoaded = true),
-        onAdFailedToLoad: (ad, err) {
-          ad.dispose();
-          debugPrint('Ad failed to load: $err');
-        },
-      ),
-      request: const AdRequest(),
-    )..load();
+    _pageController = PageController(initialPage: _currentIndex);
   }
 
   @override
   void dispose() {
-    if (!kIsWeb) {
-      _bannerAd.dispose();
-    }
+    _pageController.dispose();
     super.dispose();
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  void _onItemTapped(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -169,28 +149,36 @@ class _MyAppState extends State<MyApp> {
       return GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Xabe',
-        initialRoute: '/login',
-        getPages: appRoutes,
-        // Set up your routes here
         theme: Pallete.lightModeAppTheme,
-        // Light theme from Pallete class
         darkTheme: Pallete.darkModeAppTheme,
-        // Dark theme from Pallete class
         themeMode: themeController.mode.value,
-        // Listen to theme mode changes
-
-        builder: (context, child) {
-          return Scaffold(
-            body: child,
-            bottomNavigationBar: (!kIsWeb && _isAdLoaded)
-                ? SizedBox(
-                    height: _bannerAd.size.height.toDouble(),
-                    width: _bannerAd.size.width.toDouble(),
-                    child: AdWidget(ad: _bannerAd),
-                  )
-                : null,
-          );
-        },
+        home: Scaffold(
+          body: PageView(
+            controller: _pageController,
+            onPageChanged: _onPageChanged,
+            children: _pages,
+            physics: const ClampingScrollPhysics(),
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: _onItemTapped,
+            items: [
+              BottomNavigationBarItem(
+                icon: Icon(
+                  _currentIndex == 0 ? Icons.home : Icons.home_outlined,
+                ),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(
+                  _currentIndex == 1 ? Icons.poll : Icons.poll_outlined,
+                ),
+                label: 'Explore',
+              ),
+            ],
+          ),
+        ),
+        getPages: appRoutes,
       );
     });
   }
