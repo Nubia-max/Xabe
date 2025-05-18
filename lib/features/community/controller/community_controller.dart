@@ -411,6 +411,13 @@ class CommunityController extends GetxController {
     );
   }
 
+  Future<List<Community>> getAllCommunitiesFuture() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('communities').get();
+
+    return snapshot.docs.map((doc) => Community.fromMap(doc.data())).toList();
+  }
+
   Future<void> leaveCommunity(Community community, String uid) async {
     try {
       final updatedMembers = List<String>.from(community.members)..remove(uid);

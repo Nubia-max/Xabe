@@ -44,6 +44,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
+  Future<void> _refreshPosts() async {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = authController.userModel.value;
@@ -324,18 +328,20 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           child: Text("No posts available."),
                         );
                       }
-                      return ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) {
-                          final post = filtered[i];
+                      return RefreshIndicator(
+                        onRefresh: _refreshPosts,
+                        child: ListView.builder(
+                          itemCount: filtered.length,
+                          itemBuilder: (_, i) {
+                            final post = filtered[i];
 
-                          // Filter out posts from blocked users
-                          if (user.blockedUsers.contains(post.uid)) {
-                            return const SizedBox.shrink();
-                          }
+                            if (user.blockedUsers.contains(post.uid)) {
+                              return const SizedBox.shrink();
+                            }
 
-                          return PostCard(post: post);
-                        },
+                            return PostCard(post: post);
+                          },
+                        ),
                       );
                     },
                   )

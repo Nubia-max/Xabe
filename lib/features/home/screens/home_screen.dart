@@ -20,17 +20,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
 
-  void displayDrawer() {
-    _scaffoldKey.currentState?.openDrawer();
-  }
+  void displayDrawer() => _scaffoldKey.currentState?.openDrawer();
+  void displayEndDrawer() => _scaffoldKey.currentState?.openEndDrawer();
 
-  void displayEndDrawer() {
-    _scaffoldKey.currentState?.openEndDrawer();
-  }
-
-  // When the title ("Xabe") is tapped, navigate to notifications.
   void onTitleTap() {
-    // Clear notifications when navigating.
     Get.find<NotificationController>().markNotificationsAsSeen();
     Navigator.push(
       context,
@@ -40,30 +33,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   ImageProvider getImageProvider(String imageUrl) {
     if (imageUrl.startsWith('http')) {
-      if (kIsWeb) {
-        return NetworkImage(imageUrl);
-      } else {
-        return CachedNetworkImageProvider(imageUrl);
-      }
+      return kIsWeb
+          ? NetworkImage(imageUrl)
+          : CachedNetworkImageProvider(imageUrl);
     } else {
       return AssetImage(imageUrl);
     }
   }
 
-  // Build a mini search bar widget that adapts its text based on available width.
   Widget buildMiniSearchBar() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Determine overall screen width using MediaQuery
         double screenWidth = MediaQuery.of(context).size.width;
-        // If the screen is too narrow, show a shorter text.
         bool showFullText = screenWidth > 400;
         return MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
-            onTap: () {
-              showSearch(context: context, delegate: SearchCommunityDelegate());
-            },
+            onTap: () => showSearch(
+                context: context, delegate: SearchCommunityDelegate()),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               margin: const EdgeInsets.only(right: 12),
@@ -91,7 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Build the notification count red dot to overlay above the title text.
   Widget buildTitleWithNotification() {
     return Tooltip(
       message: 'notifications',
@@ -148,13 +134,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Async function to refresh the community list.
   Future<void> _refreshCommunities() async {
     await Get.find<CommunityController>().refreshUserCommunities();
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(milliseconds: 300));
+    setState(() {});
   }
 
-  // Build the communities view wrapped with RefreshIndicator.
   Widget buildCommunities() {
     final communityController = Get.find<CommunityController>();
     return StreamBuilder<List>(
@@ -166,10 +151,12 @@ class _HomeScreenState extends State<HomeScreen> {
         if (snapshot.hasError) {
           return Center(child: Text("Error: ${snapshot.error}"));
         }
+
         final communities = snapshot.data!;
         if (communities.isEmpty) {
           return const Center(child: Text('No community found.'));
         }
+
         return RefreshIndicator(
           onRefresh: _refreshCommunities,
           child: ListView.builder(
@@ -203,7 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: displayDrawer,
         ),
         actions: [
-          // Always show the responsive mini search bar.
           buildMiniSearchBar(),
           IconButton(
             icon: CircleAvatar(
