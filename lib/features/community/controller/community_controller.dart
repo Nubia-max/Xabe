@@ -16,6 +16,8 @@ import 'package:xabe/core/failure.dart';
 import 'package:xabe/core/providers/storage_repository.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 
+import '../../../core/constants/firebase_constants.dart';
+
 class CommunityBinding extends Bindings {
   @override
   void dependencies() {
@@ -433,6 +435,14 @@ class CommunityController extends GetxController {
   Stream<List<Post>> getCommunityPosts(String communityId) {
     print('[DEBUG] Fetching posts for communityId: $communityId'); // ✅ Add this
     return communityRepository.getCommunityPosts(communityId);
+  }
+
+  Stream<List<Community>> getAllCommunities() {
+    return FirebaseFirestore.instance
+        .collection(FirebaseConstants.communitiesCollection)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Community.fromMap(doc.data())).toList());
   }
 
   // Optional: Local cache of communities.
