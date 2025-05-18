@@ -138,8 +138,9 @@ class CommunityBox extends StatelessWidget {
                       right: 4,
                       child: NeoButton(
                         text: "Vote",
-                        isVoted:
-                            false, // Update with your vote state if needed.
+                        isVoted: false,
+                        isDisabled: false, // or true based on your logic
+                        pricePerVote: 0, // or fetch from post if available
                         onTap: () {
                           navigateToCommunityWithFilter('carousel');
                         },

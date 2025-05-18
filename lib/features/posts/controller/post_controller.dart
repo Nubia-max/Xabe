@@ -53,17 +53,30 @@ class PostController extends GetxController {
     if (user == null || !user.isAuthenticated) return;
 
     final post = await _postRepository.getPostByIdFuture(postId);
-    if (post == null || post.userVotes.containsKey(user.uid)) return;
+    if (post == null) return;
+
+    final userVotes = post.userVotes[user.uid] ?? [];
+
+    if (userVotes.length >= post.maxVotesPerPerson) {
+      showSnackBar(Get.context!, "You’ve used all your votes.");
+      return;
+    }
+
+    final updatedUserVotes = [...userVotes, index];
+    final updatedImageVotes = Map<String, int>.from(post.imageVotes);
+    final imageKey = index.toString();
+    updatedImageVotes[imageKey] = (updatedImageVotes[imageKey] ?? 0) + 1;
 
     final updatedPost = post.copyWith(
-      userVotes: {...post.userVotes, user.uid: index},
-      imageVotes: {
-        ...post.imageVotes,
-        index.toString(): (post.imageVotes[index.toString()] ?? 0) + 1
+      userVotes: {
+        ...post.userVotes,
+        user.uid: updatedUserVotes,
       },
+      imageVotes: updatedImageVotes,
     );
 
     await _postRepository.updatePost(updatedPost);
+
     final postIndex = posts.indexWhere((p) => p.id == postId);
     if (postIndex != -1) posts[postIndex] = updatedPost;
   }
@@ -149,6 +162,8 @@ class PostController extends GetxController {
     required List<dynamic> files,
     required List<List<Map<String, dynamic>>> taggedUsers,
     required bool showLiveResults,
+    required int pricePerVote, // ✅ Add this
+    required int maxVotesPerPerson,
     bool isCarousel2 = false,
     DateTime? electionEndTime,
   }) async {
@@ -265,8 +280,11 @@ class PostController extends GetxController {
       taggedNames: taggedNames,
       taggedUids: taggedUids,
       showLiveResults: showLiveResults,
+      pricePerVote:
+          selectedCommunity.communityType == 'premium' ? pricePerVote : 0,
+      maxVotesPerPerson:
+          selectedCommunity.communityType == 'premium' ? maxVotesPerPerson : 1,
     );
-
     final res = await _postRepository.addPost(post);
     isLoading.value = false;
 
@@ -466,6 +484,18 @@ class PostController extends GetxController {
       );
     } catch (e) {
       Get.snackbar('Error', 'Failed to update live progress status.');
+    }
+  }
+
+  Future<void> updatePost(Post post) async {
+    try {
+      await _postRepository.updatePost(post);
+      final index = posts.indexWhere((p) => p.id == post.id);
+      if (index != -1) {
+        posts[index] = post;
+      }
+    } catch (e) {
+      debugPrint('Failed to update post: $e');
     }
   }
 

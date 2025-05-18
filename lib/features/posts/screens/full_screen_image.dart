@@ -26,7 +26,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
   late PageController _pageController;
   late int _currentPage;
   bool _showTags = false;
-  late bool _alreadyVoted;
+  late int _alreadyVotedCount;
   Map<String, String> userNames = {};
   static final Map<String, String> _cachedUsernames = {};
 
@@ -35,12 +35,14 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
     super.initState();
     _currentPage = widget.initialPage;
     _pageController = PageController(initialPage: _currentPage);
-
-    final user = Get.find<AuthController>().userModel.value!;
-    _alreadyVoted = widget.post.userVotes.containsKey(user.uid);
-
-    // fetch usernames for all UIDs
+    _updateVoteState();
     _fetchUsernames(widget.post.taggedUids);
+  }
+
+  void _updateVoteState() {
+    final user = Get.find<AuthController>().userModel.value!;
+    final votes = widget.post.userVotes[user.uid] ?? [];
+    _alreadyVotedCount = votes.length;
   }
 
   Future<void> _fetchUsernames(List<String> ids) async {
@@ -71,7 +73,10 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
   }
 
   void _vote() {
-    if (_alreadyVoted) return;
+    if (_alreadyVotedCount >= widget.post.maxVotesPerPerson) {
+      Get.snackbar('Limit Reached', 'You have used all your votes.');
+      return;
+    }
 
     if (widget.post.electionEndTime != null &&
         DateTime.now().isAfter(widget.post.electionEndTime!)) {
@@ -93,20 +98,39 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Confirm Vote"),
-        content: Text("Are you sure you want to vote for $taggedName?"),
+        content: Text("Vote for $taggedName?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text("Cancel"),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              Get.find<PostController>().voteForCandidate(
-                widget.post.id,
-                _currentPage,
+              final user = Get.find<AuthController>().userModel.value!;
+              final controller = Get.find<PostController>();
+
+              // Vote logic: Add to user's vote list
+              final existingVotes = widget.post.userVotes[user.uid] ?? [];
+              final updatedVotes = List<int>.from(existingVotes)
+                ..add(_currentPage);
+
+              final updatedPost = widget.post.copyWith(
+                userVotes: {
+                  ...widget.post.userVotes,
+                  user.uid: updatedVotes,
+                },
+                imageVotes: {
+                  ...widget.post.imageVotes,
+                  '$_currentPage':
+                      (widget.post.imageVotes['$_currentPage'] ?? 0) + 1,
+                },
               );
-              setState(() => _alreadyVoted = true);
+
+              await controller.updatePost(updatedPost);
+              setState(() {
+                _alreadyVotedCount++;
+              });
             },
             child: const Text("Vote"),
           ),
@@ -141,8 +165,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
               onPageChanged: (idx) {
                 setState(() {
                   _currentPage = idx;
-                  final user = Get.find<AuthController>().userModel.value!;
-                  _alreadyVoted = widget.post.userVotes.containsKey(user.uid);
+                  _updateVoteState();
                 });
               },
               itemBuilder: (context, idx) {
@@ -215,8 +238,15 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                 bottom: 20,
                 right: 20,
                 child: NeoButton(
-                  isVoted: _alreadyVoted,
-                  onTap: _vote,
+                  isVoted: false,
+                  isDisabled:
+                      _alreadyVotedCount >= widget.post.maxVotesPerPerson,
+                  pricePerVote: widget.post.pricePerVote,
+                  onTap: () {
+                    if (_alreadyVotedCount < widget.post.maxVotesPerPerson) {
+                      _vote();
+                    }
+                  },
                 ),
               ),
           ],

@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 
 class NeoButton extends StatefulWidget {
   final VoidCallback onTap;
-  final String text;
-  final bool isVoted; // Control the "voted" state
+  final bool isVoted; // Controls the voted appearance
+  final bool isDisabled; // Disables the button if true
+  final int pricePerVote; // If > 0, shows ₦price instead of "Vote"
+  final String text; // Optional fallback text
 
   const NeoButton({
     super.key,
     required this.onTap,
+    required this.isVoted,
+    required this.isDisabled,
+    required this.pricePerVote,
     this.text = "Vote",
-    this.isVoted = false,
   });
 
   @override
-  _NeoButtonState createState() => _NeoButtonState();
+  State<NeoButton> createState() => _NeoButtonState();
 }
 
 class _NeoButtonState extends State<NeoButton> {
@@ -24,11 +28,15 @@ class _NeoButtonState extends State<NeoButton> {
     const double width = 60;
     const double height = 30;
 
+    final bool isInactive = widget.isDisabled || widget.isVoted;
+
     final backgroundColor =
-        widget.isVoted ? Colors.grey.shade500 : Colors.green[900];
-    final fontWeight = widget.isVoted ? FontWeight.normal : FontWeight.bold;
-    final List<BoxShadow> boxShadows = widget.isVoted
-        ? <BoxShadow>[] // No shadows if already voted.
+        isInactive ? Colors.grey.shade500 : Colors.green[900];
+
+    final fontWeight = isInactive ? FontWeight.normal : FontWeight.bold;
+
+    final List<BoxShadow> boxShadows = isInactive
+        ? <BoxShadow>[] // No shadows if inactive
         : _isPressed
             ? <BoxShadow>[
                 BoxShadow(
@@ -45,39 +53,37 @@ class _NeoButtonState extends State<NeoButton> {
                 ),
               ]
             : <BoxShadow>[
-                BoxShadow(
+                const BoxShadow(
                   color: Colors.green,
-                  offset: const Offset(-2, -2),
+                  offset: Offset(-2, -2),
                   blurRadius: 2,
                 ),
-                BoxShadow(
+                const BoxShadow(
                   color: Colors.black,
-                  offset: const Offset(2, 2),
+                  offset: Offset(2, 2),
                   blurRadius: 5,
                 ),
               ];
 
+    final String displayText = widget.pricePerVote > 0
+        ? '₦${widget.pricePerVote}'
+        : (widget.isVoted ? 'Voted' : widget.text);
+
     return GestureDetector(
       onTapDown: (_) {
-        if (!widget.isVoted) {
-          setState(() {
-            _isPressed = true;
-          });
+        if (!isInactive) {
+          setState(() => _isPressed = true);
         }
       },
       onTapUp: (_) {
-        if (!widget.isVoted) {
-          setState(() {
-            _isPressed = false;
-          });
+        if (!isInactive) {
+          setState(() => _isPressed = false);
           widget.onTap();
         }
       },
       onTapCancel: () {
-        if (!widget.isVoted) {
-          setState(() {
-            _isPressed = false;
-          });
+        if (!isInactive) {
+          setState(() => _isPressed = false);
         }
       },
       child: AnimatedContainer(
@@ -91,10 +97,11 @@ class _NeoButtonState extends State<NeoButton> {
         ),
         child: Center(
           child: Text(
-            widget.text,
+            displayText,
             style: TextStyle(
               color: Colors.white,
               fontWeight: fontWeight,
+              fontSize: 12,
             ),
           ),
         ),

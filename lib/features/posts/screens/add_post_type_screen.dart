@@ -39,6 +39,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
   // Flag to track whether the share button has been clicked
   bool isSharing = false;
   bool showLiveProgress = true;
+  int pricePerVote = 0;
+  int maxVotesPerPerson = 1;
 
   @override
   void dispose() {
@@ -384,6 +386,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         caption: captionText,
         electionEndTime: electionEndTime,
         showLiveResults: showLiveProgress,
+        pricePerVote: pricePerVote,
+        maxVotesPerPerson: maxVotesPerPerson,
       )
           .then((_) {
         setState(() {
@@ -402,6 +406,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         taggedUsers: <List<Map<String, dynamic>>>[], // ✅ adjusted type
         isCarousel2: true,
         caption: captionText, showLiveResults: showLiveProgress,
+        pricePerVote: pricePerVote,
+        maxVotesPerPerson: maxVotesPerPerson,
       )
           .then((_) {
         setState(() {
@@ -517,19 +523,15 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                 stream:
                     Get.find<CommunityController>().getUserCommunitiesStream(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError) {
+                  if (snapshot.hasError)
                     return Text('Error: ${snapshot.error}');
-                  }
-                  if (!snapshot.hasData) {
-                    return const Loader();
-                  }
+                  if (!snapshot.hasData) return const Loader();
 
                   final data = snapshot.data!;
                   communities = data;
 
-                  if (data.isEmpty) {
+                  if (data.isEmpty)
                     return const Text("No communities available.");
-                  }
 
                   if (selectedCommunity == null) {
                     final routeCommunity = Get.parameters['community'];
@@ -642,17 +644,17 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
               ],
               if (isTypeCarousel) ...[
                 const SizedBox(height: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: pickImages,
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text("Pick Candidates"),
-                    ),
-                    const SizedBox(height: 10),
-                    carouselImages.isNotEmpty
-                        ? SizedBox(
+                ElevatedButton.icon(
+                  onPressed: pickImages,
+                  icon: const Icon(Icons.photo_library),
+                  label: const Text("Pick Candidates"),
+                ),
+                const SizedBox(height: 10),
+                carouselImages.isNotEmpty
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
                             height: 150,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
@@ -712,10 +714,48 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                                 );
                               },
                             ),
-                          )
-                        : buildEmptyImageSelector(),
-                  ],
-                ),
+                          ),
+                          // PREMIUM FIELDS - after image row
+                          if (selectedCommunity?.communityType ==
+                              'premium') ...[
+                            const SizedBox(height: 20),
+                            const Text('Set Price Per Vote (₦)',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            TextField(
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: '0',
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  pricePerVote = int.tryParse(value) ?? 0;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            const Text('Max Votes Per Person',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            TextField(
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: '1',
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  maxVotesPerPerson = int.tryParse(value) ?? 1;
+                                });
+                              },
+                            ),
+                          ],
+                        ],
+                      )
+                    : buildEmptyImageSelector(),
               ],
             ],
           ),

@@ -14,7 +14,7 @@ class Post {
   final String type;
   final DateTime createdAt;
   final List<String> imageUrls;
-  final Map<String, int> userVotes;
+  final Map<String, List<int>> userVotes;
   final List<String> taggedUsers;
   final Map<String, int> imageVotes;
   final int likes;
@@ -23,6 +23,8 @@ class Post {
   final List<String> taggedNames;
   final List<String> taggedUids;
   final bool showLiveResults;
+  final int pricePerVote;
+  final int maxVotesPerPerson;
 
   Post({
     required this.id,
@@ -38,8 +40,10 @@ class Post {
     required this.type,
     required this.createdAt,
     required this.showLiveResults,
+    this.pricePerVote = 0,
+    this.maxVotesPerPerson = 1,
     List<String>? imageUrls,
-    Map<String, int>? userVotes,
+    Map<String, List<int>>? userVotes,
     List<String>? taggedUsers,
     List<String>? taggedNames,
     List<String>? taggedUids,
@@ -72,13 +76,15 @@ class Post {
     List<String>? imageUrls,
     List<String>? taggedNames,
     List<String>? taggedUids,
-    Map<String, int>? userVotes,
+    Map<String, List<int>>? userVotes,
     List<String>? taggedUsers,
     Map<String, int>? imageVotes,
     int? likes,
     List<String>? likedBy,
     DateTime? electionEndTime,
     bool? showLiveResults,
+    int? pricePerVote,
+    int? maxVotesPerPerson,
   }) {
     return Post(
       id: id ?? this.id,
@@ -103,11 +109,13 @@ class Post {
       taggedNames: taggedNames ?? this.taggedNames,
       taggedUids: taggedUids ?? this.taggedUids,
       showLiveResults: showLiveResults ?? this.showLiveResults,
+      pricePerVote: pricePerVote ?? this.pricePerVote,
+      maxVotesPerPerson: maxVotesPerPerson ?? this.maxVotesPerPerson,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{
+    return {
       'id': id,
       'title': title,
       'link': link,
@@ -130,64 +138,81 @@ class Post {
       'taggedNames': taggedNames,
       'taggedUids': taggedUids,
       'showLiveResults': showLiveResults,
+      'pricePerVote': pricePerVote,
+      'maxVotesPerPerson': maxVotesPerPerson,
     };
   }
 
   factory Post.fromMap(Map<String, dynamic> map) {
+    final rawUserVotes = map['userVotes'] ?? {};
+    final parsedUserVotes = <String, List<int>>{};
+
+    (rawUserVotes as Map<String, dynamic>).forEach((key, value) {
+      if (value is List) {
+        parsedUserVotes[key] = List<int>.from(value);
+      } else {
+        parsedUserVotes[key] = [value as int];
+      }
+    });
+
     return Post(
-      id: map['id'] as String? ?? '',
-      title: map['title'] as String? ?? 'No Title',
-      link: map['link'] as String?,
-      description: map['description'] as String?,
-      communityName: map['communityName'] as String? ?? '',
-      communityId: map['communityId'] as String? ?? '',
-      communityProfilePic: map['communityProfilePic'] as String? ?? '',
-      commentCount: map['commentCount'] as int? ?? 0,
-      username: map['username'] as String? ?? 'Unknown',
-      uid: map['uid'] as String? ?? '',
-      type: map['type'] as String? ?? 'text',
-      createdAt:
-          DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int? ?? 0),
-      imageUrls: (map['imageUrls'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-      userVotes: Map<String, int>.from(map['userVotes'] ?? {}),
+      id: map['id'] ?? '',
+      title: map['title'] ?? 'No Title',
+      link: map['link'],
+      description: map['description'],
+      communityName: map['communityName'] ?? '',
+      communityId: map['communityId'] ?? '',
+      communityProfilePic: map['communityProfilePic'] ?? '',
+      commentCount: map['commentCount'] ?? 0,
+      username: map['username'] ?? 'Unknown',
+      uid: map['uid'] ?? '',
+      type: map['type'] ?? 'text',
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
+      imageUrls: List<String>.from(map['imageUrls'] ?? []),
+      userVotes: parsedUserVotes,
       taggedUsers: List<String>.from(map['taggedUsers'] ?? []),
       imageVotes: Map<String, int>.from(map['imageVotes'] ?? {}),
-      likes: map['likes'] as int? ?? 0,
+      likes: map['likes'] ?? 0,
       likedBy: List<String>.from(map['likedBy'] ?? []),
       taggedNames: List<String>.from(map['taggedNames'] ?? []),
       taggedUids: List<String>.from(map['taggedUids'] ?? []),
       electionEndTime: map['electionEndTime'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['electionEndTime'] as int)
+          ? DateTime.fromMillisecondsSinceEpoch(map['electionEndTime'])
           : null,
-      showLiveResults: map['showLiveResults'] as bool? ?? false,
+      showLiveResults: map['showLiveResults'] ?? false,
+      pricePerVote: map['pricePerVote'] ?? 0,
+      maxVotesPerPerson: map['maxVotesPerPerson'] ?? 1,
     );
   }
 
   @override
-  bool operator ==(covariant Post other) {
-    if (identical(this, other)) return true;
-
-    return other.id == id &&
-        other.title == title &&
-        other.link == link &&
-        other.description == description &&
-        other.communityName == communityName &&
-        other.communityId == communityId &&
-        other.communityProfilePic == communityProfilePic &&
-        other.commentCount == commentCount &&
-        other.username == username &&
-        other.uid == uid &&
-        other.type == type &&
-        other.createdAt == createdAt &&
-        listEquals(other.imageUrls, imageUrls) &&
-        mapEquals(other.userVotes, userVotes) &&
-        listEquals(other.taggedUsers, taggedUsers) &&
-        listEquals(other.likedBy, likedBy) &&
-        other.showLiveResults == showLiveResults &&
-        other.electionEndTime == electionEndTime;
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is Post &&
+            id == other.id &&
+            title == other.title &&
+            link == other.link &&
+            description == other.description &&
+            communityName == other.communityName &&
+            communityId == other.communityId &&
+            communityProfilePic == other.communityProfilePic &&
+            commentCount == other.commentCount &&
+            username == other.username &&
+            uid == other.uid &&
+            type == other.type &&
+            createdAt == other.createdAt &&
+            listEquals(imageUrls, other.imageUrls) &&
+            mapEquals(userVotes, other.userVotes) &&
+            listEquals(taggedUsers, other.taggedUsers) &&
+            mapEquals(imageVotes, other.imageVotes) &&
+            likes == other.likes &&
+            listEquals(likedBy, other.likedBy) &&
+            electionEndTime == other.electionEndTime &&
+            listEquals(taggedNames, other.taggedNames) &&
+            listEquals(taggedUids, other.taggedUids) &&
+            showLiveResults == other.showLiveResults &&
+            pricePerVote == other.pricePerVote &&
+            maxVotesPerPerson == other.maxVotesPerPerson);
   }
 
   @override
@@ -207,8 +232,14 @@ class Post {
         imageUrls.hashCode ^
         userVotes.hashCode ^
         taggedUsers.hashCode ^
+        imageVotes.hashCode ^
+        likes.hashCode ^
         likedBy.hashCode ^
+        electionEndTime.hashCode ^
+        taggedNames.hashCode ^
+        taggedUids.hashCode ^
         showLiveResults.hashCode ^
-        electionEndTime.hashCode;
+        pricePerVote.hashCode ^
+        maxVotesPerPerson.hashCode;
   }
 }

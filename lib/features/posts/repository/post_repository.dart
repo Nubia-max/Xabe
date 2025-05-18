@@ -38,9 +38,12 @@ class PostRepository {
   Future<Either<Failure, void>> voteForCandidate(
       String postId, int index, String uid) async {
     try {
-      await _firestore.collection('posts').doc(postId).update({
-        'userVotes.$uid': index,
+      final docRef = _firestore.collection('posts').doc(postId);
+
+      await docRef.update({
+        'userVotes.$uid': FieldValue.arrayUnion([index]),
       });
+
       return right(null);
     } catch (e) {
       return left(Failure(e.toString()));

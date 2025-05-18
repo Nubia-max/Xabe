@@ -181,6 +181,10 @@ class _PostCardState extends State<PostCard>
     final user = Get.find<AuthController>().userModel.value!;
     final currentTheme = Get.theme;
     final alreadyVoted = widget.post.userVotes.containsKey(user.uid);
+    final currentUserVotes =
+        widget.post.userVotes.entries.where((e) => e.key == user.uid);
+    final alreadyVotedCount = currentUserVotes.length;
+
     final votedIndex = widget.post.userVotes[user.uid];
 
     // Group the flat list of tagged users into sublists based on the number of images.
@@ -299,7 +303,7 @@ class _PostCardState extends State<PostCard>
                                                     community
                                                         .name, // Display the community name
                                                     style: const TextStyle(
-                                                      fontSize: 16,
+                                                      fontSize: 15,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
@@ -606,22 +610,48 @@ class _PostCardState extends State<PostCard>
                                                               bottom: 5,
                                                               right: 5,
                                                               child: NeoButton(
-                                                                isVoted:
-                                                                    alreadyVoted,
+                                                                isVoted: alreadyVotedCount >=
+                                                                    (widget.post
+                                                                            .maxVotesPerPerson ??
+                                                                        1),
+                                                                isDisabled:
+                                                                    alreadyVotedCount >=
+                                                                        (widget.post.maxVotesPerPerson ??
+                                                                            1),
+                                                                pricePerVote: widget
+                                                                        .post
+                                                                        .pricePerVote ??
+                                                                    0,
                                                                 onTap: () {
                                                                   final currentUser = Get
                                                                           .find<
                                                                               AuthController>()
                                                                       .userModel
                                                                       .value!;
-                                                                  if (widget
+                                                                  final postVotes = widget
                                                                       .post
                                                                       .userVotes
-                                                                      .containsKey(
+                                                                      .entries
+                                                                      .where((entry) =>
+                                                                          entry
+                                                                              .key ==
                                                                           currentUser
-                                                                              .uid)) {
+                                                                              .uid)
+                                                                      .length;
+
+                                                                  final maxVotesAllowed =
+                                                                      widget.post
+                                                                              .maxVotesPerPerson ??
+                                                                          1;
+
+                                                                  if (postVotes >=
+                                                                      maxVotesAllowed) {
+                                                                    showSnackBar(
+                                                                        context,
+                                                                        "You’ve used all allowed votes.");
                                                                     return;
                                                                   }
+
                                                                   if (widget.post
                                                                               .electionEndTime !=
                                                                           null &&
@@ -633,6 +663,7 @@ class _PostCardState extends State<PostCard>
                                                                         "Election has ended");
                                                                     return;
                                                                   }
+
                                                                   final taggedList =
                                                                       groupedTaggedUsers[
                                                                           index];
@@ -663,8 +694,13 @@ class _PostCardState extends State<PostCard>
                                                                         AlertDialog(
                                                                       title: const Text(
                                                                           "Confirm Vote"),
-                                                                      content: Text(
-                                                                          "Vote for $taggedName?"),
+                                                                      content:
+                                                                          Text(
+                                                                        widget.post.pricePerVote != null &&
+                                                                                widget.post.pricePerVote! > 0
+                                                                            ? "Vote for $taggedName for ₦${widget.post.pricePerVote}?"
+                                                                            : "Vote for $taggedName?",
+                                                                      ),
                                                                       actions: [
                                                                         TextButton(
                                                                           onPressed: () =>
@@ -676,8 +712,10 @@ class _PostCardState extends State<PostCard>
                                                                           onPressed:
                                                                               () {
                                                                             Navigator.pop(context);
-                                                                            Get.find<PostController>().voteForCandidate(widget.post.id,
-                                                                                index);
+                                                                            Get.find<PostController>().voteForCandidate(
+                                                                              widget.post.id,
+                                                                              index,
+                                                                            );
                                                                             setState(() {});
                                                                           },
                                                                           child:
