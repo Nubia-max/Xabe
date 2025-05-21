@@ -152,7 +152,8 @@ class _HomeScreenState extends State<HomeScreen> {
           return Center(child: Text("Error: ${snapshot.error}"));
         }
 
-        final communities = snapshot.data!;
+        final communities = snapshot.data ?? [];
+
         if (communities.isEmpty) {
           return const Center(child: Text('No community found.'));
         }
