@@ -151,6 +151,7 @@ class CommunityController extends GetxController {
       requiresVerification: requiresVerification,
       pendingMembers: [],
       creatorUid: uid,
+      communityType: communityType,
     );
 
     final res = await communityRepository.createCommunity(community);
