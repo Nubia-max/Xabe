@@ -166,6 +166,7 @@ class PostController extends GetxController {
     required int maxVotesPerPerson,
     bool isCarousel2 = false,
     DateTime? electionEndTime,
+    required bool allowNonMembersToVote,
   }) async {
     isLoading.value = true;
 
@@ -284,6 +285,7 @@ class PostController extends GetxController {
           selectedCommunity.communityType == 'premium' ? pricePerVote : 0,
       maxVotesPerPerson:
           selectedCommunity.communityType == 'premium' ? maxVotesPerPerson : 1,
+      allowNonMembersToVote: allowNonMembersToVote,
     );
     final res = await _postRepository.addPost(post);
     isLoading.value = false;
@@ -497,6 +499,34 @@ class PostController extends GetxController {
     } catch (e) {
       debugPrint('Failed to update post: $e');
     }
+  }
+
+  Stream<List<Post>> premiumElectionPostsStream() async* {
+    // Get all premium community IDs first
+    final premiumCommunitiesSnapshot = await FirebaseFirestore.instance
+        .collection(FirebaseConstants.communitiesCollection)
+        .where('communityType', isEqualTo: 'premium')
+        .get();
+
+    final premiumCommunityIds =
+        premiumCommunitiesSnapshot.docs.map((doc) => doc.id).toList();
+
+    if (premiumCommunityIds.isEmpty) {
+      yield [];
+      return;
+    }
+
+    // Listen to posts filtered by those communityIds, type 'carousel', and allowNonMembersToVote == true
+    yield* FirebaseFirestore.instance
+        .collection(FirebaseConstants.postsCollection)
+        .where('communityId', whereIn: premiumCommunityIds)
+        .where('type', isEqualTo: 'carousel')
+        .where('allowNonMembersToVote', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Post.fromMap(doc.data() as Map<String, dynamic>))
+            .toList());
   }
 
   /// Helper to convert Uint8List to File.

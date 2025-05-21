@@ -17,8 +17,9 @@ import '../theme/pallete.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
+  final void Function(Post updatedPost)? onVoteSuccess;
 
-  const PostCard({super.key, required this.post});
+  const PostCard({super.key, required this.post, this.onVoteSuccess});
 
   @override
   _PostCardState createState() => _PostCardState();

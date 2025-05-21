@@ -6,7 +6,7 @@ import 'package:xabe/features/auth/controller/auth_controller.dart';
 import 'package:xabe/models/community_model.dart';
 import 'package:xabe/features/community/repository/community_repository.dart';
 
-class ModToolsScreen extends StatelessWidget {
+class ModToolsScreen extends StatefulWidget {
   final Community community;
   final CommunityRepository _communityRepo = CommunityRepository(
     firestore: FirebaseFirestore.instance,
@@ -17,12 +17,19 @@ class ModToolsScreen extends StatelessWidget {
     required this.community,
   });
 
+  @override
+  _ModToolsScreenState createState() => _ModToolsScreenState();
+}
+
+class _ModToolsScreenState extends State<ModToolsScreen> {
+  bool _isUpgrading = false;
+
   void _navigateToEditCommunity() {
-    Get.toNamed('/edit-community/${Uri.encodeComponent(community.id)}');
+    Get.toNamed('/edit-community/${Uri.encodeComponent(widget.community.id)}');
   }
 
   void _navigateToAddMods() {
-    Get.toNamed('/add-mods/${Uri.encodeComponent(community.id)}');
+    Get.toNamed('/add-mods/${Uri.encodeComponent(widget.community.id)}');
   }
 
   void _confirmAndDelete(BuildContext context) {
@@ -31,7 +38,7 @@ class ModToolsScreen extends StatelessWidget {
       builder: (_) => AlertDialog(
         title: const Text('Delete Community'),
         content: Text(
-          'Are you sure you want to delete "${community.name}"? '
+          'Are you sure you want to delete "${widget.community.name}"? '
           'This action cannot be undone.',
         ),
         actions: [
@@ -45,7 +52,8 @@ class ModToolsScreen extends StatelessWidget {
             ),
             onPressed: () async {
               Navigator.pop(context); // close dialog
-              final result = await _communityRepo.deleteCommunity(community.id);
+              final result = await widget._communityRepo
+                  .deleteCommunity(widget.community.id);
               result.match(
                 (failure) => Get.snackbar(
                   'Error',
@@ -55,7 +63,7 @@ class ModToolsScreen extends StatelessWidget {
                 (_) {
                   Get.snackbar(
                     'Deleted',
-                    'Community "${community.name}" has been deleted.',
+                    'Community "${widget.community.name}" has been deleted.',
                     snackPosition: SnackPosition.BOTTOM,
                   );
                   Get.offAllNamed('/');
@@ -79,10 +87,54 @@ class ModToolsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _upgradeToPremium() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Upgrade to Premium"),
+        content:
+            Text("Upgrade ${widget.community.name} to premium for ₦5,000?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text("Upgrade"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _isUpgrading = true);
+      try {
+        await FirebaseFirestore.instance
+            .collection('communities')
+            .doc(widget.community.id)
+            .update({'communityType': 'premium'});
+
+        if (mounted) {
+          Get.snackbar('Success', 'Community upgraded to premium.');
+        }
+      } catch (e) {
+        if (mounted) {
+          Get.snackbar('Error', 'Failed to upgrade community: $e');
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isUpgrading = false);
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid = Get.find<AuthController>().userModel.value?.uid;
-    final isCreator = currentUid != null && currentUid == community.creatorUid;
+    final isCreator =
+        currentUid != null && currentUid == widget.community.creatorUid;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mod Tools')),
@@ -99,15 +151,38 @@ class ModToolsScreen extends StatelessWidget {
               title: const Text('Edit Community'),
               onTap: _navigateToEditCommunity,
             ),
+
+            // **Upgrade to Premium button only if community is standard**
+            if (widget.community.communityType == 'regular')
+              Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: ListTile(
+                  title: const Text('Upgrade to Premium'),
+                  subtitle: const Text(
+                      'Upgrade this community to premium for ₦5,000.'),
+                  trailing: _isUpgrading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : ElevatedButton(
+                          onPressed: _upgradeToPremium,
+                          child: const Text('Upgrade'),
+                        ),
+                ),
+              ),
+
             const Divider(),
             ListTile(
               leading: const Icon(Icons.block),
               title: const Text('Banned Users'),
-              subtitle: community.bannedUsers.isEmpty
+              subtitle: widget.community.bannedUsers.isEmpty
                   ? const Text('No banned users.')
                   : null,
             ),
-            ...community.bannedUsers.map((uid) {
+            ...widget.community.bannedUsers.map((uid) {
               return FutureBuilder<String>(
                 future: _fetchUsername(uid),
                 builder: (context, snapshot) {
@@ -122,7 +197,7 @@ class ModToolsScreen extends StatelessWidget {
                       onPressed: () async {
                         await FirebaseFirestore.instance
                             .collection('communities')
-                            .doc(community.id)
+                            .doc(widget.community.id)
                             .update({
                           'bannedUsers': FieldValue.arrayRemove([uid]),
                         });
@@ -138,6 +213,7 @@ class ModToolsScreen extends StatelessWidget {
                 },
               );
             }).toList(),
+
             if (isCreator) ...[
               const Divider(),
               ListTile(

@@ -41,6 +41,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
   bool showLiveProgress = true;
   int pricePerVote = 0;
   int maxVotesPerPerson = 1;
+  bool allowNonMembersToVote = false; // default false
 
   @override
   void dispose() {
@@ -388,6 +389,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         showLiveResults: showLiveProgress,
         pricePerVote: pricePerVote,
         maxVotesPerPerson: maxVotesPerPerson,
+        allowNonMembersToVote: allowNonMembersToVote,
       )
           .then((_) {
         setState(() {
@@ -408,6 +410,7 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         caption: captionText, showLiveResults: showLiveProgress,
         pricePerVote: pricePerVote,
         maxVotesPerPerson: maxVotesPerPerson,
+        allowNonMembersToVote: allowNonMembersToVote,
       )
           .then((_) {
         setState(() {
@@ -752,6 +755,20 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
                                 });
                               },
                             ),
+                            if (selectedCommunity?.communityType ==
+                                'premium') ...[
+                              const SizedBox(height: 20),
+                              SwitchListTile(
+                                title: const Text(
+                                    'Allow non-community members to vote'),
+                                value: allowNonMembersToVote,
+                                onChanged: (val) {
+                                  setState(() {
+                                    allowNonMembersToVote = val;
+                                  });
+                                },
+                              ),
+                            ],
                           ],
                         ],
                       )

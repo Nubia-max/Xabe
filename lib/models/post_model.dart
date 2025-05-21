@@ -25,6 +25,7 @@ class Post {
   final bool showLiveResults;
   final int pricePerVote;
   final int maxVotesPerPerson;
+  final bool allowNonMembersToVote; // NEW field added here
 
   Post({
     required this.id,
@@ -42,6 +43,7 @@ class Post {
     required this.showLiveResults,
     this.pricePerVote = 0,
     this.maxVotesPerPerson = 1,
+    this.allowNonMembersToVote = false, // default to false
     List<String>? imageUrls,
     Map<String, List<int>>? userVotes,
     List<String>? taggedUsers,
@@ -85,6 +87,7 @@ class Post {
     bool? showLiveResults,
     int? pricePerVote,
     int? maxVotesPerPerson,
+    bool? allowNonMembersToVote,
   }) {
     return Post(
       id: id ?? this.id,
@@ -111,6 +114,8 @@ class Post {
       showLiveResults: showLiveResults ?? this.showLiveResults,
       pricePerVote: pricePerVote ?? this.pricePerVote,
       maxVotesPerPerson: maxVotesPerPerson ?? this.maxVotesPerPerson,
+      allowNonMembersToVote:
+          allowNonMembersToVote ?? this.allowNonMembersToVote,
     );
   }
 
@@ -140,6 +145,7 @@ class Post {
       'showLiveResults': showLiveResults,
       'pricePerVote': pricePerVote,
       'maxVotesPerPerson': maxVotesPerPerson,
+      'allowNonMembersToVote': allowNonMembersToVote, // new field saved here
     };
   }
 
@@ -182,6 +188,8 @@ class Post {
       showLiveResults: map['showLiveResults'] ?? false,
       pricePerVote: map['pricePerVote'] ?? 0,
       maxVotesPerPerson: map['maxVotesPerPerson'] ?? 1,
+      allowNonMembersToVote:
+          map['allowNonMembersToVote'] ?? false, // new field parsed here
     );
   }
 
@@ -212,7 +220,8 @@ class Post {
             listEquals(taggedUids, other.taggedUids) &&
             showLiveResults == other.showLiveResults &&
             pricePerVote == other.pricePerVote &&
-            maxVotesPerPerson == other.maxVotesPerPerson);
+            maxVotesPerPerson == other.maxVotesPerPerson &&
+            allowNonMembersToVote == other.allowNonMembersToVote);
   }
 
   @override
@@ -240,6 +249,7 @@ class Post {
         taggedUids.hashCode ^
         showLiveResults.hashCode ^
         pricePerVote.hashCode ^
-        maxVotesPerPerson.hashCode;
+        maxVotesPerPerson.hashCode ^
+        allowNonMembersToVote.hashCode;
   }
 }
