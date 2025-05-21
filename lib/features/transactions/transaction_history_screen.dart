@@ -47,35 +47,68 @@ class TransactionHistoryScreen extends StatelessWidget {
             return const Center(child: Text('No transactions found.'));
           }
 
-          return ListView.separated(
-            itemCount: docs.length,
-            separatorBuilder: (_, __) => const Divider(),
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              final data = doc.data() as Map<String, dynamic>;
-
-              final amount = data['amount'] ?? 0;
-              final createdAt = data['createdAt'] as Timestamp?;
-              final status = data['status'] ?? 'unknown';
-
-              return ListTile(
-                leading: Icon(
-                  status == 'success' ? Icons.check_circle : Icons.error,
-                  color: status == 'success' ? Colors.green : Colors.red,
-                ),
-                title: Text('₦$amount'),
-                subtitle: Text(createdAt != null
-                    ? _formatDate(createdAt)
-                    : 'Unknown date'),
-                trailing: Text(
-                  status.toString().toUpperCase(),
-                  style: TextStyle(
-                    color: status == 'success' ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              // You can trigger a manual reload here if needed.
+              // Firestore snapshots auto-update, so this can be empty.
+              await Future.delayed(const Duration(milliseconds: 500));
             },
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final doc = docs[index];
+                final data = doc.data() as Map<String, dynamic>;
+
+                final amountRaw = data['amount'] ?? 0;
+                final amount = amountRaw is int
+                    ? amountRaw.toDouble()
+                    : amountRaw as double? ?? 0.0;
+
+                final createdAt = data['createdAt'] as Timestamp?;
+                final status =
+                    (data['status'] ?? 'unknown').toString().toLowerCase();
+
+                Color statusColor;
+                IconData statusIcon;
+
+                switch (status) {
+                  case 'success':
+                    statusColor = Colors.green;
+                    statusIcon = Icons.check_circle;
+                    break;
+                  case 'pending':
+                    statusColor = Colors.orange;
+                    statusIcon = Icons.hourglass_empty;
+                    break;
+                  case 'failed':
+                  case 'error':
+                    statusColor = Colors.red;
+                    statusIcon = Icons.error;
+                    break;
+                  default:
+                    statusColor = Colors.grey;
+                    statusIcon = Icons.help_outline;
+                }
+
+                return ListTile(
+                  leading: Icon(statusIcon, color: statusColor),
+                  title: Text('₦${amount.toStringAsFixed(2)}'),
+                  subtitle: Text(
+                    createdAt != null ? _formatDate(createdAt) : 'Unknown date',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: Text(
+                    status.toUpperCase(),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),

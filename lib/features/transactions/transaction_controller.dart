@@ -15,4 +15,24 @@ class TransactionController extends GetxController {
             .map((doc) => TransactionModel.fromMap(doc.data()))
             .toList());
   }
+
+  Future<void> recordTransaction({
+    required String userId,
+    required double amount,
+    required String status, // e.g. 'success', 'failed'
+    required String reference, // transaction reference from Paystack
+    String? paymentMethod,
+  }) async {
+    final transactionsCollection =
+        FirebaseFirestore.instance.collection('transactions');
+
+    await transactionsCollection.add({
+      'userId': userId,
+      'amount': amount,
+      'status': status,
+      'reference': reference,
+      'paymentMethod': paymentMethod ?? 'unknown',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

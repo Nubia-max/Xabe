@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pay_with_paystack/pay_with_paystack.dart';
 
 import '../auth/controller/auth_controller.dart';
@@ -17,12 +18,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   bool _isLoading = false;
 
+  /// Records a transaction in Firestore
+  Future<void> _recordTransaction({
+    required String userId,
+    required double amount,
+    required String status,
+    required String reference,
+    String paymentMethod = 'card',
+  }) async {
+    final transactionsCollection =
+        FirebaseFirestore.instance.collection('transactions');
+
+    await transactionsCollection.add({
+      'userId': userId,
+      'amount': amount,
+      'status': status,
+      'reference': reference,
+      'paymentMethod': paymentMethod,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> _startPayment(int amountInMinorUnits) async {
     setState(() => _isLoading = true);
 
     final uniqueTransRef = PayWithPayStack().generateUuidV4();
 
-    final userEmail = Get.find<AuthController>().userModel.value?.email;
+    final authController = Get.find<AuthController>();
+    final userEmail = authController.userModel.value?.email;
 
     if (userEmail == null || userEmail.isEmpty) {
       Get.snackbar(
@@ -32,6 +55,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       setState(() => _isLoading = false);
       return; // Stop if email is not available
     }
+
+    final userId = authController.userModel.value?.uid ?? '';
 
     try {
       await PayWithPayStack().now(
@@ -48,11 +73,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
           debugPrint('Payment completed: $paymentData');
           Get.snackbar('Success', 'Payment successful!');
 
-          // Convert minor units back to normal (e.g. kobo to Naira)
           final paidAmount = amountInMinorUnits / 1.0;
 
-          // Update user balance via AuthController
-          await Get.find<AuthController>().addFundsToUserBalance(paidAmount);
+          // Save transaction record to Firestore
+          await _recordTransaction(
+            userId: userId,
+            amount: paidAmount,
+            status: 'success',
+            reference: uniqueTransRef,
+            paymentMethod: 'card', // or set dynamically if needed
+          );
+
+          // Update user balance
+          await authController.addFundsToUserBalance(paidAmount);
 
           Navigator.pop(context, true);
         },
