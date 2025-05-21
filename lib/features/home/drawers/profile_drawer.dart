@@ -6,7 +6,9 @@ import 'package:xabe/theme/pallete.dart';
 import '../../../admin/admin build.dart';
 import '../../../theme/theme_controller.dart';
 import '../../auth/controller/auth_controller.dart';
+import '../../transactions/payment_screen.dart';
 import '../delegates/settings_screen.dart';
+import '../../transactions/transaction_history_screen.dart'; // adjust path if needed
 
 class ProfileDrawer extends StatelessWidget {
   const ProfileDrawer({super.key});
@@ -38,13 +40,48 @@ class ProfileDrawer extends StatelessWidget {
               'u/${user?.name ?? ''}',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
             ),
+
+            // --- Account balance under username ---
+            if (user != null) ...[
+              const SizedBox(height: 5),
+              Text(
+                'Balance: ₦${user.balance.toStringAsFixed(2)}',
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+              ),
+            ],
+
             const SizedBox(height: 10),
             const Divider(),
+
             ListTile(
               title: const Text('My Profile'),
               leading: const Icon(Icons.person),
               onTap: () => navigateToUserProfile(user?.uid ?? ''),
             ),
+
+            // --- Add Funds tile ---
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet),
+              title: const Text('Add Funds'),
+              onTap: () async {
+                final paymentResult = await Get.to(() => PaymentScreen());
+                if (paymentResult == true) {
+                  // Refresh the user profile/balance here
+                  await Get.find<AuthController>()
+                      .reloadUser(); // You need to implement reloadUser() in AuthController
+                  Get.snackbar('Success', 'Balance updated!');
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Transaction History'),
+              onTap: () {
+                Get.to(() => const TransactionHistoryScreen());
+              },
+            ),
+
             Obx(
               () => ListTile(
                 title: const Text('Dark Mode'),
@@ -56,16 +93,19 @@ class ProfileDrawer extends StatelessWidget {
                 ),
               ),
             ),
+
             ListTile(
               title: const Text('Moderation Queue'),
               leading: const Icon(Icons.report),
               onTap: () => Get.to(() => ModerationQueuePage()),
             ),
+
             ListTile(
               title: const Text('Settings'),
               leading: const Icon(Icons.settings),
               onTap: () => Get.to(() => const SettingsScreen()),
             ),
+
             ListTile(
               title: const Text('Log Out'),
               leading: Icon(Icons.logout, color: Pallete.redColor),

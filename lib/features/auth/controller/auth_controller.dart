@@ -116,4 +116,53 @@ class AuthController extends GetxController {
     if (user == null) return false;
     return community.mods.contains(user.uid);
   }
+
+  /// Adds funds to the user's balance, updates backend and local model
+  Future<void> addFundsToUserBalance(double amount) async {
+    final user = userModel.value;
+    if (user == null) {
+      Get.snackbar('Error', 'User not logged in');
+      return;
+    }
+
+    isLoading.value = true;
+
+    final newBalance = (user.balance ?? 0) + amount;
+
+    // Assuming your backend expects this update, and your AuthRepository has updateUserBalance
+    final result =
+        await _authRepository.updateUserBalance(user.uid, newBalance);
+
+    isLoading.value = false;
+
+    result.fold(
+      (failure) {
+        Get.snackbar('Error', failure.message);
+      },
+      (_) {
+        // Update local user model with new balance
+        userModel.update((val) {
+          if (val != null) {
+            userModel.value = val.copyWith(balance: newBalance);
+          }
+        });
+
+        Get.snackbar('Success', 'Your balance has been updated');
+      },
+    );
+  }
+
+  /// Reload user data from backend
+  Future<void> reloadUser() async {
+    final currentUser = userModel.value;
+    if (currentUser == null) return;
+
+    try {
+      final updatedUser =
+          await _authRepository.getUserData(currentUser.uid).first;
+      userModel.value = updatedUser;
+    } catch (e) {
+      debugPrint('Failed to reload user: $e');
+    }
+  }
 }

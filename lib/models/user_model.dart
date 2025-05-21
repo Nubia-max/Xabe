@@ -7,18 +7,22 @@ class UserModel {
   final String bio; // New field
   final String profilePic;
   final String uid;
+  final String email;
   final bool isAuthenticated;
   final List<String> blockedUsers; // New field to store blocked user IDs
   final bool? bannedFromCommunities; // ✅ ADD THIS
+  final double balance; // Account balance field
 
   UserModel({
     required this.name,
     required this.bio, // Added to constructor
     required this.profilePic,
     required this.uid,
+    required this.email,
     required this.isAuthenticated,
     required this.blockedUsers, // Add blockedUsers in the constructor
     this.bannedFromCommunities,
+    this.balance = 0.0, // default 0.0
   });
 
   UserModel copyWith({
@@ -26,17 +30,24 @@ class UserModel {
     String? bio,
     String? profilePic,
     String? uid,
+    String? email,
     bool? isAuthenticated,
     List<String>? blockedUsers, // Add blockedUsers to copyWith
+    bool? bannedFromCommunities,
+    double? balance,
   }) {
     return UserModel(
       name: name ?? this.name,
       bio: bio ?? this.bio,
       profilePic: profilePic ?? this.profilePic,
       uid: uid ?? this.uid,
+      email: email ?? this.email,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       blockedUsers:
           blockedUsers ?? this.blockedUsers, // Handle blockedUsers here
+      bannedFromCommunities:
+          bannedFromCommunities ?? this.bannedFromCommunities,
+      balance: balance ?? this.balance,
     );
   }
 
@@ -46,9 +57,11 @@ class UserModel {
       'bio': bio, // Added here
       'profilePic': profilePic,
       'uid': uid,
+      'email': email,
       'isAuthenticated': isAuthenticated,
       'blockedUsers': blockedUsers, // Add blockedUsers to the map
       'bannedFromCommunities': bannedFromCommunities ?? false, // default
+      'balance': balance,
     };
   }
 
@@ -59,10 +72,15 @@ class UserModel {
           '', // Default to empty string if not provided
       profilePic: map['profilePic'] as String? ?? 'No Profile Pic',
       uid: map['uid'] as String? ?? 'No UID',
+      email: map['email'] as String? ?? '',
       isAuthenticated: map['isAuthenticated'] as bool? ?? false,
       blockedUsers: List<String>.from(map['blockedUsers'] ?? []),
       bannedFromCommunities: map['bannedFromCommunities'] ?? false,
-      // Parse blockedUsers
+      balance: (map['balance'] != null)
+          ? (map['balance'] is int
+              ? (map['balance'] as int).toDouble()
+              : map['balance'] as double)
+          : 0.0,
     );
   }
 
@@ -73,7 +91,7 @@ class UserModel {
 
   @override
   String toString() {
-    return 'UserModel(name: $name, bio: $bio, profilePic: $profilePic, uid: $uid, isAuthenticated: $isAuthenticated, blockedUsers: $blockedUsers)';
+    return 'UserModel(name: $name, bio: $bio, profilePic: $profilePic, uid: $uid, isAuthenticated: $isAuthenticated, blockedUsers: $blockedUsers, bannedFromCommunities: $bannedFromCommunities, balance: $balance)';
   }
 
   @override
@@ -85,7 +103,9 @@ class UserModel {
         other.profilePic == profilePic &&
         other.uid == uid &&
         other.isAuthenticated == isAuthenticated &&
-        listEquals(other.blockedUsers, blockedUsers); // Compare blockedUsers
+        listEquals(other.blockedUsers, blockedUsers) && // Compare blockedUsers
+        other.bannedFromCommunities == bannedFromCommunities &&
+        other.balance == balance;
   }
 
   @override
@@ -95,6 +115,8 @@ class UserModel {
         profilePic.hashCode ^
         uid.hashCode ^
         isAuthenticated.hashCode ^
-        blockedUsers.hashCode; // Include blockedUsers in hashCode
+        blockedUsers.hashCode ^ // Include blockedUsers in hashCode
+        bannedFromCommunities.hashCode ^
+        balance.hashCode;
   }
 }

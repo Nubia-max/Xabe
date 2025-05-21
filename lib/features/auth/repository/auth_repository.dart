@@ -70,6 +70,7 @@ class AuthRepository {
           name: userCredential.user!.displayName ?? 'No Name',
           profilePic: userCredential.user!.photoURL ?? Constants.avatarDefault,
           uid: userCredential.user!.uid,
+          email: userCredential.user!.email ?? '',
           isAuthenticated: true,
           bio: '',
           blockedUsers: [], // Initialize blockedUsers as empty list
@@ -106,6 +107,7 @@ class AuthRepository {
           name: 'New User',
           profilePic: Constants.avatarDefault,
           bio: '',
+          email: '',
           isAuthenticated: true,
           blockedUsers: [], // Initialize with an empty list
         );
@@ -175,6 +177,18 @@ class AuthRepository {
     await _auth.signOut();
   }
 
+  Future<Either<Failure, void>> updateUserBalance(
+      String uid, double newBalance) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'balance': newBalance,
+      });
+      return right(null); // success
+    } catch (e) {
+      return left(Failure('Failed to update user balance: $e'));
+    }
+  }
+
   // Function to sign in with Apple
   FutureEither<UserModel> signInWithApple(bool isFromLogin) async {
     try {
@@ -212,6 +226,7 @@ class AuthRepository {
           uid: userCredential.user!.uid,
           isAuthenticated: true,
           bio: '',
+          email: '',
           blockedUsers: [], // Initialize blockedUsers for new users
         );
         await _users.doc(userModel.uid).set(userModel.toMap());

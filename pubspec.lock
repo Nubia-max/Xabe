@@ -896,6 +896,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
+  pay_with_paystack:
+    dependency: "direct main"
+    description:
+      name: pay_with_paystack
+      sha256: bb9ab4034f46831ffdf3460e8e602ba5c77ba8622395d4b4726f102c90dbf81f
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.14"
   petitparser:
     dependency: transitive
     description:
