@@ -13,6 +13,34 @@ import '../../transactions/transaction_history_screen.dart'; // adjust path if n
 class ProfileDrawer extends StatelessWidget {
   const ProfileDrawer({super.key});
 
+  void confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // Close dialog
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Get.find<AuthController>().logout();
+              },
+              child: const Text(
+                'Log Out',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void logOut() {
     Get.find<AuthController>().logout();
   }
@@ -109,7 +137,7 @@ class ProfileDrawer extends StatelessWidget {
             ListTile(
               title: const Text('Log Out'),
               leading: Icon(Icons.logout, color: Pallete.redColor),
-              onTap: logOut,
+              onTap: () => confirmLogout(context),
             ),
           ],
         ),
