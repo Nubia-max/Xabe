@@ -14,6 +14,7 @@ class Community {
   final bool requiresVerification;
   final List<String> bannedUsers;
   final String communityType;
+  final double balance;
 
   Community({
     required this.id,
@@ -29,6 +30,7 @@ class Community {
     required this.requiresVerification,
     this.bannedUsers = const [],
     this.communityType = 'regular',
+    this.balance = 0.0,
   });
 
   Community copyWith({
@@ -46,6 +48,7 @@ class Community {
     List<String>? pendingMembers,
     List<String>? bannedUsers,
     String? communityType,
+    double? balance,
   }) {
     return Community(
       id: id ?? this.id,
@@ -62,6 +65,7 @@ class Community {
       bannedUsers: bannedUsers ?? this.bannedUsers,
       communityType:
           communityType ?? this.communityType, // Use provided or current
+      balance: balance ?? this.balance,
     );
   }
 
@@ -81,6 +85,7 @@ class Community {
       'requiresVerification': requiresVerification,
       'bannedUsers': bannedUsers,
       'communityType': communityType,
+      'balance': balance,
     };
   }
 
@@ -99,6 +104,11 @@ class Community {
       requiresVerification: map['requiresVerification'] ?? true,
       bannedUsers: List<String>.from(map['bannedUsers'] ?? []),
       communityType: map['communityType'] as String? ?? 'regular',
+      balance: (map['balance'] != null)
+          ? (map['balance'] is int
+              ? (map['balance'] as int).toDouble()
+              : map['balance'] as double)
+          : 0.0,
     );
   }
 
@@ -120,7 +130,8 @@ class Community {
         listEquals(other.mods, mods) &&
         other.campaignThumbnailUrl == campaignThumbnailUrl &&
         other.electionThumbnailUrl == electionThumbnailUrl &&
-        other.communityType == communityType;
+        other.communityType == communityType &&
+        other.balance == balance;
   }
 
   @override
@@ -133,6 +144,7 @@ class Community {
         mods.hashCode ^
         campaignThumbnailUrl.hashCode ^
         electionThumbnailUrl.hashCode ^
-        communityType.hashCode;
+        communityType.hashCode ^
+        balance.hashCode;
   }
 }

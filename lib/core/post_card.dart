@@ -717,7 +717,7 @@ class _PostCardState extends State<PostCard>
                                                                               widget.post.id,
                                                                               index,
                                                                             );
-                                                                            setState(() {});
+                                                                            //setState(() {});
                                                                           },
                                                                           child:
                                                                               const Text("Vote"),

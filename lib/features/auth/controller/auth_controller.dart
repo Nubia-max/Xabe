@@ -22,22 +22,30 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
     _authRepository.authStateChange.listen((User? firebaseUser) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (firebaseUser == null) {
           Get.offAllNamed('/login');
         } else {
-          _authRepository.getUserData(firebaseUser.uid).listen((user) async {
+          // Fetch user once instead of listening indefinitely
+          final user =
+              await _authRepository.getUserData(firebaseUser.uid).first;
+          userModel.value = user;
+
+          final prefs = await SharedPreferences.getInstance();
+          final version = prefs.getInt(kEulaVersionKey) ?? 0;
+
+          if (version < kCurrentEulaVersion) {
+            Get.offAllNamed('/terms');
+          } else {
+            Get.offAllNamed('/');
+          }
+
+          // Now start listening to user data changes but WITHOUT navigation
+          _authRepository.getUserData(firebaseUser.uid).listen((user) {
             userModel.value = user;
-
-            final prefs = await SharedPreferences.getInstance();
-            final version = prefs.getInt(kEulaVersionKey) ?? 0;
-
-            if (version < kCurrentEulaVersion) {
-              Get.offAllNamed('/terms');
-            } else {
-              Get.offAllNamed('/');
-            }
+            // No navigation here
           });
         }
       });

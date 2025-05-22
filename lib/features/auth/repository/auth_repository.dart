@@ -189,6 +189,29 @@ class AuthRepository {
     }
   }
 
+  FutureVoid deductUserBalance(String uid, double amount) async {
+    try {
+      final userDoc = _firestore.collection('users').doc(uid);
+
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(userDoc);
+        if (!snapshot.exists) throw 'User does not exist';
+
+        final currentBalance = (snapshot.data()?['balance'] ?? 0).toDouble();
+
+        if (currentBalance < amount) throw 'Insufficient balance';
+
+        transaction.update(userDoc, {
+          'balance': currentBalance - amount,
+        });
+      });
+
+      return right(null);
+    } catch (e) {
+      return left(Failure(e.toString()));
+    }
+  }
+
   // Function to sign in with Apple
   FutureEither<UserModel> signInWithApple(bool isFromLogin) async {
     try {

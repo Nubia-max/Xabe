@@ -167,6 +167,29 @@ class CommunityRepository {
     }
   }
 
+  FutureVoid addFundsToCommunityBalance(
+      String communityId, double amount) async {
+    try {
+      final communityDoc = _communities.doc(communityId);
+
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(communityDoc);
+        if (!snapshot.exists) throw 'Community does not exist';
+
+        final data = snapshot.data() as Map<String, dynamic>?; // cast first
+        final currentBalance = (data?['balance'] ?? 0).toDouble();
+
+        transaction.update(communityDoc, {
+          'balance': currentBalance + amount,
+        });
+      });
+
+      return right(null);
+    } catch (e) {
+      return left(Failure(e.toString()));
+    }
+  }
+
   // Get posts for a community using UUID
   Stream<List<Post>> getCommunityPosts(String communityId) {
     return _posts

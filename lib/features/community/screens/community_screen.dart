@@ -48,6 +48,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
     setState(() {});
   }
 
+  ImageProvider getImageProvider(String imageUrl) {
+    if (imageUrl.startsWith('http')) {
+      return NetworkImage(imageUrl);
+    } else {
+      return AssetImage(imageUrl);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = authController.userModel.value;
@@ -77,7 +85,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
           final docSnap = snapshot.data;
           if (docSnap == null || !docSnap.exists) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (Get.currentRoute != '/') {
+              // Only navigate if still on this community screen
+              final currentRoute = Get.currentRoute;
+              if (currentRoute.contains(widget.communityId)) {
                 Get.offAllNamed('/');
                 Get.snackbar(
                   'Deleted',
@@ -94,6 +104,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
           final isGuest = !user.isAuthenticated;
           final isMod = community.mods.contains(user.uid);
+          final isPremium = community.communityType == 'premium';
 
           return NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
@@ -111,44 +122,97 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 35,
-                            backgroundImage: community.avatar.isEmpty
-                                ? const AssetImage('assets/images/logo.png')
-                                : getImageProvider(community.avatar),
-                          ),
-                          const SizedBox(height: 5),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              CircleAvatar(
+                                radius: 35,
+                                backgroundImage: community.avatar.isEmpty
+                                    ? const AssetImage('assets/images/logo.png')
+                                    : getImageProvider(community.avatar),
+                              ),
+                              const SizedBox(width: 16),
                               Expanded(
-                                child: Text(
-                                  community.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      community.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    if (isPremium) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber[700],
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'Premium',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              if (community.communityType == 'premium') ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber[700],
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'Premium',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              if (isPremium && isMod)
+                                StreamBuilder<
+                                    DocumentSnapshot<Map<String, dynamic>>>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('communities')
+                                      .doc(community.id)
+                                      .snapshots(),
+                                  builder: (context, snapshot) {
+                                    if (!snapshot.hasData ||
+                                        snapshot.hasError) {
+                                      return const SizedBox();
+                                    }
+                                    final communityData = snapshot.data!.data();
+                                    if (communityData == null)
+                                      return const SizedBox();
+
+                                    final balanceRaw =
+                                        communityData['balance'] ?? 0;
+                                    final balance = (balanceRaw is int)
+                                        ? balanceRaw.toDouble()
+                                        : balanceRaw as double;
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[600],
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '₦${balance.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
                               if (!isGuest && isMod)
                                 OutlinedButton(
                                   onPressed: () {
@@ -308,9 +372,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         .getCommunityPosts(widget.communityId),
                     builder: (ctx, postSnapshot) {
                       if (postSnapshot.hasError) {
-                        return ErrorText(
-                          error: postSnapshot.error.toString(),
-                        );
+                        return ErrorText(error: postSnapshot.error.toString());
                       }
                       if (!postSnapshot.hasData) return const Loader();
 

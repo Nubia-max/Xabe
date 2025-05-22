@@ -18,6 +18,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/failure.dart';
 import '../../../core/providers/storage_repository.dart';
 import '../../auth/controller/auth_controller.dart';
+import '../../community/controller/community_controller.dart';
 import '../../notifications/notification_controller.dart';
 import '../../user_profile/controller/user_profile_controller.dart';
 
@@ -49,36 +50,147 @@ class PostController extends GetxController {
   }
 
   Future<void> voteForCandidate(String postId, int index) async {
-    final user = Get.find<AuthController>().userModel.value;
+    final authController = Get.find<AuthController>();
+    final user = authController.userModel.value;
     if (user == null || !user.isAuthenticated) return;
 
     final post = await _postRepository.getPostByIdFuture(postId);
     if (post == null) return;
 
-    final userVotes = post.userVotes[user.uid] ?? [];
+    try {
+      // Fetch community document for this post
+      final communitySnapshot = await FirebaseFirestore.instance
+          .collection('communities')
+          .doc(post.communityId)
+          .get();
 
-    if (userVotes.length >= post.maxVotesPerPerson) {
-      showSnackBar(Get.context!, "You’ve used all your votes.");
-      return;
+      if (!communitySnapshot.exists) {
+        showSnackBar(Get.context!, "Community not found.");
+        return;
+      }
+
+      final communityData = communitySnapshot.data()!;
+      final communityType = communityData['communityType'] ?? 'regular';
+
+      // Safely convert pricePerVote to double
+      final double pricePerVote = (post.pricePerVote ?? 0).toDouble();
+
+      if (communityType == 'premium') {
+        // Check user's balance before voting
+        if (user.balance < pricePerVote) {
+          showSnackBar(Get.context!, "Insufficient balance to vote.");
+          return;
+        }
+
+        // Firestore references
+        final userDocRef =
+            FirebaseFirestore.instance.collection('users').doc(user.uid);
+        final communityDocRef = FirebaseFirestore.instance
+            .collection('communities')
+            .doc(post.communityId);
+        final postDocRef =
+            FirebaseFirestore.instance.collection('posts').doc(postId);
+
+        // Run transaction to atomically update balances and votes
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final freshUserSnapshot = await transaction.get(userDocRef);
+          final freshCommunitySnapshot = await transaction.get(communityDocRef);
+          final freshPostSnapshot = await transaction.get(postDocRef);
+
+          final freshUserData = freshUserSnapshot.data()!;
+          final freshCommunityData = freshCommunitySnapshot.data()!;
+          final freshPostData = freshPostSnapshot.data()!;
+
+          final freshUserBalanceRaw = freshUserData['balance'] ?? 0;
+          final freshUserBalance = (freshUserBalanceRaw is int)
+              ? freshUserBalanceRaw.toDouble()
+              : freshUserBalanceRaw as double;
+
+          if (freshUserBalance < pricePerVote) {
+            throw 'Insufficient balance inside transaction.';
+          }
+
+          // Deduct price from user balance
+          final newUserBalance = freshUserBalance - pricePerVote;
+          transaction.update(userDocRef, {'balance': newUserBalance});
+
+          // Add price to community balance
+          final freshCommunityBalanceRaw = freshCommunityData['balance'] ?? 0;
+          final freshCommunityBalance = (freshCommunityBalanceRaw is int)
+              ? freshCommunityBalanceRaw.toDouble()
+              : freshCommunityBalanceRaw as double;
+          final newCommunityBalance = freshCommunityBalance + pricePerVote;
+          transaction.update(communityDocRef, {'balance': newCommunityBalance});
+
+          // Update user votes for the post
+          final userVotes =
+              Map<String, dynamic>.from(freshPostData['userVotes'] ?? {});
+          List<dynamic> votesList = userVotes[user.uid] ?? [];
+
+          if (votesList.length >= (freshPostData['maxVotesPerPerson'] ?? 1)) {
+            throw 'You’ve used all your votes.';
+          }
+
+          votesList = List<dynamic>.from(votesList);
+          votesList.add(index);
+          userVotes[user.uid] = votesList;
+
+          final imageVotes =
+              Map<String, dynamic>.from(freshPostData['imageVotes'] ?? {});
+          final imageKey = index.toString();
+          imageVotes[imageKey] = (imageVotes[imageKey] ?? 0) + 1;
+
+          transaction.update(postDocRef, {
+            'userVotes': userVotes,
+            'imageVotes': imageVotes,
+          });
+        });
+
+        // Update local user balance after successful transaction
+        final updatedUserBalance = user.balance - pricePerVote;
+
+        // **Update the Rx userModel without navigating**
+        authController.userModel.update((val) {
+          if (val != null) {
+            val = val.copyWith(balance: updatedUserBalance);
+          }
+        });
+
+        // DO NOT call Get.back() here — no navigation!
+      } else {
+        // Non-premium communities: update votes without balance checks
+        final userVotes = post.userVotes[user.uid] ?? [];
+
+        if (userVotes.length >= post.maxVotesPerPerson) {
+          showSnackBar(Get.context!, "You’ve used all your votes.");
+          return;
+        }
+
+        final updatedUserVotes = [...userVotes, index];
+        final updatedImageVotes = Map<String, int>.from(post.imageVotes);
+        final imageKey = index.toString();
+        updatedImageVotes[imageKey] = (updatedImageVotes[imageKey] ?? 0) + 1;
+
+        final updatedPost = post.copyWith(
+          userVotes: {
+            ...post.userVotes,
+            user.uid: updatedUserVotes,
+          },
+          imageVotes: updatedImageVotes,
+        );
+
+        await _postRepository.updatePost(updatedPost);
+
+        final postIndex = posts.indexWhere((p) => p.id == postId);
+        if (postIndex != -1) posts[postIndex] = updatedPost;
+      }
+    } catch (e) {
+      if (e is String) {
+        showSnackBar(Get.context!, e);
+      } else {
+        showSnackBar(Get.context!, "Error voting: $e");
+      }
     }
-
-    final updatedUserVotes = [...userVotes, index];
-    final updatedImageVotes = Map<String, int>.from(post.imageVotes);
-    final imageKey = index.toString();
-    updatedImageVotes[imageKey] = (updatedImageVotes[imageKey] ?? 0) + 1;
-
-    final updatedPost = post.copyWith(
-      userVotes: {
-        ...post.userVotes,
-        user.uid: updatedUserVotes,
-      },
-      imageVotes: updatedImageVotes,
-    );
-
-    await _postRepository.updatePost(updatedPost);
-
-    final postIndex = posts.indexWhere((p) => p.id == postId);
-    if (postIndex != -1) posts[postIndex] = updatedPost;
   }
 
   Future<void> likePost(String postId, String userId,
