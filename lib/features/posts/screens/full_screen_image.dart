@@ -98,7 +98,11 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Confirm Vote"),
-        content: Text("Vote for $taggedName?"),
+        content: Text(
+          widget.post.pricePerVote != null && widget.post.pricePerVote! > 0
+              ? "Vote for $taggedName for ₦${widget.post.pricePerVote}?"
+              : "Vote for $taggedName?",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -107,27 +111,10 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              final user = Get.find<AuthController>().userModel.value!;
+
               final controller = Get.find<PostController>();
+              await controller.voteForCandidate(widget.post.id, _currentPage);
 
-              // Vote logic: Add to user's vote list
-              final existingVotes = widget.post.userVotes[user.uid] ?? [];
-              final updatedVotes = List<int>.from(existingVotes)
-                ..add(_currentPage);
-
-              final updatedPost = widget.post.copyWith(
-                userVotes: {
-                  ...widget.post.userVotes,
-                  user.uid: updatedVotes,
-                },
-                imageVotes: {
-                  ...widget.post.imageVotes,
-                  '$_currentPage':
-                      (widget.post.imageVotes['$_currentPage'] ?? 0) + 1,
-                },
-              );
-
-              await controller.updatePost(updatedPost);
               setState(() {
                 _alreadyVotedCount++;
               });
