@@ -7,6 +7,7 @@ import '../../../admin/admin build.dart';
 import '../../../theme/theme_controller.dart';
 import '../../auth/controller/auth_controller.dart';
 import '../../transactions/payment_screen.dart';
+import '../../../admin/withdrawals/withdrawal_approval_screen.dart';
 import '../delegates/settings_screen.dart';
 import '../../transactions/transaction_history_screen.dart'; // adjust path if needed
 
@@ -133,6 +134,29 @@ class ProfileDrawer extends StatelessWidget {
               leading: const Icon(Icons.settings),
               onTap: () => Get.to(() => const SettingsScreen()),
             ),
+
+            // ** ADMIN-ONLY Withdrawal Approval Tile **
+            if (user?.isAdmin == true) ...[
+              ListTile(
+                leading: const Icon(Icons.admin_panel_settings),
+                title: const Text('Withdrawal Requests (Admin)'),
+                subtitle: const Text('Approve or reject withdrawal requests'),
+                onTap: () => Get.to(() => WithdrawalApprovalScreen()),
+              ),
+            ],
+
+            // Inside ProfileDrawer build method, after other tiles and inside Column children:
+
+            if (user?.isAdmin == true) ...[
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Withdrawal Request History'),
+                onTap: () {
+                  Get.toNamed(
+                      '/withdrawal-request-history'); // Ensure route is added in your router
+                },
+              ),
+            ],
 
             ListTile(
               title: const Text('Log Out'),

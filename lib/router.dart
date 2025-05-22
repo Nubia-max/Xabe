@@ -21,10 +21,14 @@ import 'package:xabe/responsive/web_screen_layout.dart';
 
 import '../models/post_model.dart';
 import 'admin/admin build.dart';
+import 'admin/withdrawals/withdraw_request_history_screen.dart';
 import 'core/terms_screen.dart';
+import 'features/auth/controller/auth_controller.dart';
 import 'features/community/controller/community_controller.dart';
 import 'features/home/delegates/blocked_users_screen.dart'; // Add the blocked users screen import
 import 'features/home/widgets/add_thumbnails.dart';
+import 'features/transactions/bank_details_screen.dart';
+import 'admin/withdrawals/withdrawal_approval_screen.dart';
 
 final List<GetPage> appRoutes = [
   // Login Screen
@@ -137,6 +141,30 @@ final List<GetPage> appRoutes = [
     },
   ),
 
+  GetPage(
+    name: '/admin/withdrawal-requests',
+    page: () {
+      final user = Get.find<AuthController>().userModel.value!;
+      if (user.isAdmin != true) {
+        return Scaffold(
+          body: Center(child: Text('Access denied')),
+        );
+      }
+      return WithdrawalApprovalScreen();
+    },
+  ),
+  GetPage(
+    name: '/withdrawal-request-history',
+    page: () => WithdrawRequestHistoryScreen(),
+  ),
+
+  GetPage(
+    name: '/bank-details',
+    page: () => ResponsiveLayout(
+      mobileScreenLayout: MobileScreenLayout(child: BankDetailsScreen()),
+      webScreenLayout: WebScreenLayout(child: BankDetailsScreen()),
+    ),
+  ),
   // Add Moderators Screen
   GetPage(
     name: '/add-mods/:id',

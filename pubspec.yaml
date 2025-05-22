@@ -57,6 +57,7 @@ dependencies:
   firebase_messaging: ^15.2.5
   visibility_detector: ^0.4.0+2
   pay_with_paystack: ^1.0.14
+  http: ^1.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

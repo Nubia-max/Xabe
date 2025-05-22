@@ -4,25 +4,37 @@ import 'package:flutter/foundation.dart';
 
 class UserModel {
   final String name;
-  final String bio; // New field
+  final String bio;
   final String profilePic;
   final String uid;
   final String email;
   final bool isAuthenticated;
-  final List<String> blockedUsers; // New field to store blocked user IDs
-  final bool? bannedFromCommunities; // ✅ ADD THIS
-  final double balance; // Account balance field
+  final List<String> blockedUsers;
+  final bool? bannedFromCommunities;
+  final double balance;
+  final bool isAdmin;
+
+  // Bank details fields
+  final String? bankAccountName;
+  final String? bankAccountNumber;
+  final String? bankCode;
+  final String? bankName;
 
   UserModel({
     required this.name,
-    required this.bio, // Added to constructor
+    required this.bio,
     required this.profilePic,
     required this.uid,
     required this.email,
     required this.isAuthenticated,
-    required this.blockedUsers, // Add blockedUsers in the constructor
+    required this.blockedUsers,
     this.bannedFromCommunities,
-    this.balance = 0.0, // default 0.0
+    this.balance = 0.0,
+    this.isAdmin = false,
+    this.bankAccountName,
+    this.bankAccountNumber,
+    this.bankCode,
+    this.bankName,
   });
 
   UserModel copyWith({
@@ -32,9 +44,14 @@ class UserModel {
     String? uid,
     String? email,
     bool? isAuthenticated,
-    List<String>? blockedUsers, // Add blockedUsers to copyWith
+    List<String>? blockedUsers,
     bool? bannedFromCommunities,
     double? balance,
+    bool? isAdmin,
+    String? bankAccountName,
+    String? bankAccountNumber,
+    String? bankCode,
+    String? bankName,
   }) {
     return UserModel(
       name: name ?? this.name,
@@ -43,33 +60,41 @@ class UserModel {
       uid: uid ?? this.uid,
       email: email ?? this.email,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      blockedUsers:
-          blockedUsers ?? this.blockedUsers, // Handle blockedUsers here
+      blockedUsers: blockedUsers ?? this.blockedUsers,
       bannedFromCommunities:
           bannedFromCommunities ?? this.bannedFromCommunities,
       balance: balance ?? this.balance,
+      isAdmin: isAdmin ?? this.isAdmin,
+      bankAccountName: bankAccountName ?? this.bankAccountName,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      bankCode: bankCode ?? this.bankCode,
+      bankName: bankName ?? this.bankName,
     );
   }
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'name': name,
-      'bio': bio, // Added here
+      'bio': bio,
       'profilePic': profilePic,
       'uid': uid,
       'email': email,
       'isAuthenticated': isAuthenticated,
-      'blockedUsers': blockedUsers, // Add blockedUsers to the map
-      'bannedFromCommunities': bannedFromCommunities ?? false, // default
+      'blockedUsers': blockedUsers,
+      'bannedFromCommunities': bannedFromCommunities ?? false,
       'balance': balance,
+      'isAdmin': isAdmin,
+      'bankAccountName': bankAccountName,
+      'bankAccountNumber': bankAccountNumber,
+      'bankCode': bankCode,
+      'bankName': bankName,
     };
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       name: map['name'] as String? ?? 'No Name',
-      bio: map['bio'] as String? ??
-          '', // Default to empty string if not provided
+      bio: map['bio'] as String? ?? '',
       profilePic: map['profilePic'] as String? ?? 'No Profile Pic',
       uid: map['uid'] as String? ?? 'No UID',
       email: map['email'] as String? ?? '',
@@ -81,6 +106,11 @@ class UserModel {
               ? (map['balance'] as int).toDouble()
               : map['balance'] as double)
           : 0.0,
+      isAdmin: map['isAdmin'] as bool? ?? false,
+      bankAccountName: map['bankAccountName'] as String?,
+      bankAccountNumber: map['bankAccountNumber'] as String?,
+      bankCode: map['bankCode'] as String?,
+      bankName: map['bankName'] as String?,
     );
   }
 
@@ -91,7 +121,7 @@ class UserModel {
 
   @override
   String toString() {
-    return 'UserModel(name: $name, bio: $bio, profilePic: $profilePic, uid: $uid, isAuthenticated: $isAuthenticated, blockedUsers: $blockedUsers, bannedFromCommunities: $bannedFromCommunities, balance: $balance)';
+    return 'UserModel(name: $name, bio: $bio, profilePic: $profilePic, uid: $uid, isAuthenticated: $isAuthenticated, blockedUsers: $blockedUsers, bannedFromCommunities: $bannedFromCommunities, balance: $balance, isAdmin: $isAdmin, bankAccountName: $bankAccountName, bankAccountNumber: $bankAccountNumber, bankCode: $bankCode, bankName: $bankName)';
   }
 
   @override
@@ -103,9 +133,14 @@ class UserModel {
         other.profilePic == profilePic &&
         other.uid == uid &&
         other.isAuthenticated == isAuthenticated &&
-        listEquals(other.blockedUsers, blockedUsers) && // Compare blockedUsers
+        listEquals(other.blockedUsers, blockedUsers) &&
         other.bannedFromCommunities == bannedFromCommunities &&
-        other.balance == balance;
+        other.balance == balance &&
+        other.isAdmin == isAdmin &&
+        other.bankAccountName == bankAccountName &&
+        other.bankAccountNumber == bankAccountNumber &&
+        other.bankCode == bankCode &&
+        other.bankName == bankName;
   }
 
   @override
@@ -115,8 +150,13 @@ class UserModel {
         profilePic.hashCode ^
         uid.hashCode ^
         isAuthenticated.hashCode ^
-        blockedUsers.hashCode ^ // Include blockedUsers in hashCode
+        blockedUsers.hashCode ^
         bannedFromCommunities.hashCode ^
-        balance.hashCode;
+        balance.hashCode ^
+        isAdmin.hashCode ^
+        (bankAccountName?.hashCode ?? 0) ^
+        (bankAccountNumber?.hashCode ?? 0) ^
+        (bankCode?.hashCode ?? 0) ^
+        (bankName?.hashCode ?? 0);
   }
 }
