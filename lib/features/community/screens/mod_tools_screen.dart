@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart' show Either, left, right;
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 import 'package:xabe/models/community_model.dart';
@@ -118,26 +121,67 @@ class _ModToolsScreenState extends State<ModToolsScreen> {
       ),
     );
 
-    if (confirmed == true) {
-      setState(() => _isUpgrading = true);
-      try {
-        await FirebaseFirestore.instance
-            .collection('communities')
-            .doc(widget.community.id)
-            .update({'communityType': 'premium'});
+    if (confirmed != true) return;
 
-        if (mounted) {
-          Get.snackbar('Success', 'Community upgraded to premium.');
-        }
-      } catch (e) {
-        if (mounted) {
-          Get.snackbar('Error', 'Failed to upgrade community: $e');
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isUpgrading = false);
-        }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      Get.snackbar('Error', 'You must be logged in to upgrade this community.');
+      return;
+    }
+
+    final email = user.email;
+    if (email == null || email.isEmpty) {
+      Get.snackbar('Error', 'Your email is missing or invalid.');
+      return;
+    }
+
+    setState(() => _isUpgrading = true);
+
+    final payload = {
+      'userId': user.uid,
+      'email': email,
+      'communityName': widget.community.name,
+      'bio': widget.community.bio ?? '',
+      'requiresVerification': widget.community.requiresVerification,
+    };
+
+    const cloudFunctionUrl =
+        'https://us-central1-xabe-ai.cloudfunctions.net/createPremiumPayment';
+
+    try {
+      final response = await http.post(
+        Uri.parse(cloudFunctionUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        Get.snackbar(
+            'Error', errorData['error'] ?? 'Payment initialization failed.');
+        setState(() => _isUpgrading = false);
+        return;
       }
+
+      final data = jsonDecode(response.body);
+      final paymentUrl = data['paymentUrl'];
+
+      if (await canLaunch(paymentUrl)) {
+        await launch(paymentUrl);
+        // Optionally, listen for payment completion or just show a message
+        // User pays in the browser, then webhook upgrades community
+        Get.snackbar(
+          'Payment',
+          'Complete payment in your browser. Community will be upgraded automatically after successful payment.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar('Error', 'Could not launch payment page.');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to initiate payment: $e');
+    } finally {
+      setState(() => _isUpgrading = false);
     }
   }
 
