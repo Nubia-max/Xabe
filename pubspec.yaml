@@ -58,7 +58,10 @@ dependencies:
   visibility_detector: ^0.4.0+2
   pay_with_paystack: ^1.0.14
   http: ^1.4.0
+  cloud_functions: ^5.5.1
+  url_launcher: ^6.3.1
   in_app_purchase: ^3.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -80,6 +83,7 @@ flutter:
     - assets/images/google.png
     - assets/images/apple.png
     - assets/images/logo.png
+    - assets/images/premium_logo.png
     - assets/animations/loginanimation.json
     - assets/animations/voteanimation.json
 

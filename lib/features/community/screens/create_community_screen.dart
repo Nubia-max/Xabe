@@ -1,11 +1,17 @@
+import 'dart:convert';
+
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:xabe/core/common/loader.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/utils/simple_filter.dart';
 import '../../../core/utils/utils.dart';
 import '../../../theme/theme_controller.dart';
+import '../../auth/controller/auth_controller.dart';
 import '../controller/community_controller.dart';
 
 class CreateCommunityScreen extends StatefulWidget {
@@ -22,116 +28,87 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
 
   String _communityType = 'regular';
 
-  final InAppPurchase _iap = InAppPurchase.instance;
-
-  bool _isAvailable = false;
   bool _purchasePending = false;
-  bool _loading = true;
-
-  // Your product ID from app stores (replace with your actual ID)
-  static const String premiumProductId = 'premium_community_5000';
-
-  List<ProductDetails> _products = [];
-  late Stream<List<PurchaseDetails>> _subscription;
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
-    _initStoreInfo();
   }
 
-  Future<void> _initStoreInfo() async {
-    final bool isAvailable = await _iap.isAvailable();
+  /// Starts premium payment via HTTP POST to your cloud function.
+  Future<bool> startPremiumPaymentHttp({
+    required String userId,
+    required String email,
+    required String communityName,
+    required String bio,
+    required bool requiresVerification,
+  }) async {
+    const cloudFunctionUrl =
+        'https://us-central1-xabe-ai.cloudfunctions.net/createPremiumPayment';
 
-    if (!isAvailable) {
-      setState(() {
-        _isAvailable = false;
-        _products = [];
-        _purchasePending = false;
-        _loading = false;
-      });
-      return;
-    }
+    final payload = {
+      'userId': userId,
+      'email': email,
+      'communityName': communityName,
+      'bio': bio,
+      'requiresVerification': requiresVerification,
+    };
 
-    final ProductDetailsResponse productDetailResponse =
-        await _iap.queryProductDetails({premiumProductId});
+    print('Calling createPremiumPayment with payload: $payload');
 
-    if (productDetailResponse.error != null) {
-      setState(() {
-        _isAvailable = false;
-        _products = [];
-        _purchasePending = false;
-        _loading = false;
-      });
-      return;
-    }
+    try {
+      final response = await http.post(
+        Uri.parse(cloudFunctionUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
 
-    if (productDetailResponse.productDetails.isEmpty) {
-      setState(() {
-        _isAvailable = false;
-        _products = [];
-        _purchasePending = false;
-        _loading = false;
-      });
-      return;
-    }
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
-    setState(() {
-      _isAvailable = true;
-      _products = productDetailResponse.productDetails;
-      _purchasePending = false;
-      _loading = false;
-    });
+      final data = jsonDecode(response.body);
 
-    _subscription = _iap.purchaseStream;
-    _subscription.listen((purchaseDetailsList) {
-      _listenToPurchaseUpdated(purchaseDetailsList);
-    }, onDone: () {
-      // stream closed
-    }, onError: (error) {
-      // handle error
-      Get.snackbar('Error', 'Purchase stream error: $error');
-    });
-  }
+      if (response.statusCode == 200 && data['paymentUrl'] != null) {
+        final url = data['paymentUrl'];
+        if (await canLaunch(url)) {
+          await launch(url);
 
-  void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
-    for (var purchaseDetails in purchaseDetailsList) {
-      if (purchaseDetails.status == PurchaseStatus.purchased) {
-        _verifyPurchase(purchaseDetails);
-      } else if (purchaseDetails.status == PurchaseStatus.error) {
-        Get.snackbar('Purchase Error',
-            purchaseDetails.error?.message ?? 'Unknown error');
-        setState(() {
-          _purchasePending = false;
-        });
-      } else if (purchaseDetails.status == PurchaseStatus.restored) {
-        _verifyPurchase(purchaseDetails);
+          // Show dialog to user after opening Paystack page
+          final bool? result = await showDialog<bool>(
+            context: Get.context!, // Use Get.context or pass context explicitly
+            builder: (context) => AlertDialog(
+              title: const Text('Payment'),
+              content: const Text(
+                  'Complete your payment in the browser. Click Done when finished.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          );
+
+          if (result == true) {
+            // Navigate to home screen after payment is done
+            Get.offAllNamed('/home'); // Change to your home route if different
+          }
+          return true;
+        } else {
+          throw 'Could not launch payment URL';
+        }
+      } else {
+        print('Server error: ${data['error']}');
+        return false;
       }
-
-      if (purchaseDetails.pendingCompletePurchase) {
-        _iap.completePurchase(purchaseDetails);
-      }
+    } catch (e) {
+      print('HTTP payment error: $e');
+      return false;
     }
   }
 
-  Future<void> _verifyPurchase(PurchaseDetails purchaseDetails) async {
-    // TODO: Verify purchase with backend or App Store / Play Store
-    // For now, assume verification success
-    if (!mounted) return;
-
-    if (purchaseDetails.pendingCompletePurchase) {
-      await _iap.completePurchase(purchaseDetails);
-    }
-
-    // After successful purchase, create the premium community
-    _createCommunityAfterPurchase();
-
-    setState(() {
-      _purchasePending = false;
-    });
-  }
-
-  void _createCommunityAfterPurchase() {
+  void createCommunity() async {
     final name = communityNameController.text.trim();
 
     if (!SimpleFilter.isClean(name)) {
@@ -139,49 +116,88 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       return;
     }
 
-    Get.find<CommunityController>().createCommunity(
-      name,
-      bioController.text.trim(),
-      requiresVerification,
-      context,
-      communityType: 'premium',
+    final communityController = Get.find<CommunityController>();
+
+    setState(() {
+      _purchasePending = true; // Show loading spinner
+    });
+
+    // Check if community name exists (works for both regular and premium)
+    final existingCommunities = await communityController.communityRepository
+        .searchCommunity(name)
+        .first;
+
+    final nameExists = existingCommunities.any(
+      (c) => c.name.toLowerCase() == name.toLowerCase(),
     );
-  }
 
-  void createCommunity() {
-    final name = communityNameController.text.trim();
-
-    if (!SimpleFilter.isClean(name)) {
-      showSnackBar(context, 'Community name contains disallowed words.');
+    if (nameExists) {
+      setState(() {
+        _purchasePending = false;
+      });
+      Get.snackbar(
+        'Error',
+        'Community with this name already exists. Please choose another name.',
+      );
       return;
     }
 
+    // Proceed with creation depending on community type
     if (_communityType == 'regular') {
-      // Create regular community immediately
-      Get.find<CommunityController>().createCommunity(
+      // Regular community creation (no payment)
+      await communityController.createCommunity(
         name,
         bioController.text.trim(),
         requiresVerification,
         context,
         communityType: 'regular',
       );
+      setState(() {
+        _purchasePending = false;
+      });
     } else if (_communityType == 'premium') {
-      if (!_isAvailable || _products.isEmpty) {
-        Get.snackbar('Store Unavailable', 'In-app purchases not available.');
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        setState(() {
+          _purchasePending = false;
+        });
+        Get.snackbar(
+            'Error', 'You must be logged in to create a premium community.');
         return;
       }
 
-      final productDetails = _products.firstWhere(
-        (product) => product.id == premiumProductId,
-        orElse: () => _products.first,
+      final email = user.email;
+      if (email == null || email.isEmpty) {
+        setState(() {
+          _purchasePending = false;
+        });
+        Get.snackbar('Error', 'Your email is missing or invalid.');
+        return;
+      }
+
+      // Start payment
+      final success = await startPremiumPaymentHttp(
+        userId: user.uid,
+        email: email,
+        communityName: name,
+        bio: bioController.text.trim(),
+        requiresVerification: requiresVerification,
       );
 
-      final purchaseParam = PurchaseParam(productDetails: productDetails);
-      _iap.buyNonConsumable(purchaseParam: purchaseParam);
-
       setState(() {
-        _purchasePending = true;
+        _purchasePending = false;
       });
+
+      if (success) {
+        Get.snackbar(
+          'Payment',
+          'Please complete the payment in your browser. After successful payment, your premium community will be created automatically.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar('Error', 'Failed to initiate payment.');
+      }
     }
   }
 
