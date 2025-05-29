@@ -168,11 +168,11 @@ class _ModToolsScreenState extends State<ModToolsScreen> {
 
       if (await canLaunch(paymentUrl)) {
         await launch(paymentUrl);
-        // Optionally, listen for payment completion or just show a message
-        // User pays in the browser, then webhook upgrades community
+
+        // Payment is done in browser, webhook will handle community upgrade
         Get.snackbar(
           'Payment',
-          'Complete payment in your browser. Community will be upgraded automatically after successful payment.',
+          'Complete payment in your browser. Your community will be upgraded automatically after successful payment.',
           snackPosition: SnackPosition.BOTTOM,
         );
       } else {

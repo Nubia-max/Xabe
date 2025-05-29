@@ -18,13 +18,13 @@ exports.createPremiumPayment = functions.https.onRequest(async (req, res) => {
   const reference = `premium-upgrade-${userId}-${Date.now()}`;
 
   const paystackPayload = {
-    email: email,
-    amount: 50000,
-    reference: reference,
+    email,
+    amount: 50000, // amount in kobo (500 NGN)
+    reference,
     metadata: {
-      userId: userId,
-      communityName: communityName,
-      bio: bio,
+      userId,
+      communityName,
+      bio,
       requiresVerification: requiresVerification.toString(),
     },
   };
@@ -49,44 +49,45 @@ exports.createPremiumPayment = functions.https.onRequest(async (req, res) => {
     }
 
     await admin.firestore().collection("premiumPayments").doc(reference).set({
-      userId: userId,
-      communityName: communityName,
-      bio: bio,
-      requiresVerification: requiresVerification,
+      userId,
+      communityName,
+      bio,
+      requiresVerification,
       status: "pending",
       amount: 50000,
-      reference: reference,
+      reference,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     return res.status(200).json({
       paymentUrl: body.data.authorization_url,
-      reference: reference,
+      reference,
     });
   } catch (error) {
     return res.status(500).json({error: error.message || "Unknown error"});
   }
 });
 
+// Callable function to check if community name exists
 exports.checkCommunityNameExists =
-functions.https.onCall(async (data, context) => {
-  const {communityName} = data;
+ functions.https.onCall(async (data, context) => {
+   const {communityName} = data;
 
-  if (!communityName) {
-    throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Missing communityName",
-    );
-  }
+   if (!communityName) {
+     throw new
+     functions.https.HttpsError("invalid-argument", "Missing communityName");
+   }
 
-  const communitiesRef = admin.firestore().collection("communities");
-  const snapshot =
+   const communitiesRef = admin.firestore().collection("communities");
+   const snapshot =
   await communitiesRef.where("name", "==", communityName).get();
 
-  return {exists: !snapshot.empty};
-});
+   return {exists: !snapshot.empty};
+ });
 
+// Paystack webhook handler to verify payment and create/upgrade community
 exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
+  // Verify webhook signature
   const hash = crypto
       .createHmac("sha512", PAYSTACK_SECRET_KEY)
       .update(JSON.stringify(req.body))
@@ -116,37 +117,45 @@ exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
 
     try {
       const communitiesRef = admin.firestore().collection("communities");
-      const existingCommunity = await communitiesRef
+      const existingCommunitySnapshot = await communitiesRef
           .where("name", "==", communityName)
           .get();
 
-      if (!existingCommunity.empty) {
-        console.log(`Community with name ${communityName} already exists.`);
-        return res.status(200).send("Community already exists");
+      if (!existingCommunitySnapshot.empty) {
+        // Upgrade existing community to premium
+        const communityDoc = existingCommunitySnapshot.docs[0];
+        await communityDoc.ref.update({
+          communityType: "premium",
+          bio, // Optionally update bio and requiresVerification on upgrade
+          requiresVerification,
+        });
+
+        console.log(`Upgraded community '${communityName}' to premium.`);
+      } else {
+        // Create new premium community
+        const communityRef = communitiesRef.doc();
+
+        await communityRef.set({
+          id: communityRef.id,
+          name: communityName,
+          bio,
+          requiresVerification,
+          communityType: "premium",
+          creatorUid: userId,
+          members: [userId],
+          mods: [userId],
+          bannedUsers: [],
+          pendingMembers: [],
+          avatar: DEFAULT_AVATAR_URL,
+          balance: 0.0,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        console.log(`Created premium community:
+         ${communityName} for user: ${userId}`);
       }
 
-      const communityRef = communitiesRef.doc();
-
-      await communityRef.set({
-        id: communityRef.id,
-        name: communityName,
-        bio: bio,
-        requiresVerification: requiresVerification,
-        communityType: "premium",
-        creatorUid: userId,
-        members: [userId],
-        mods: [userId],
-        bannedUsers: [],
-        pendingMembers: [],
-        avatar: DEFAULT_AVATAR_URL,
-        balance: 0.0,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      console.log(
-          `Created premium community: ${communityName} for user: ${userId}`,
-      );
-
+      // Update payment status to successful
       const paymentRef = admin.firestore()
           .collection("premiumPayments")
           .doc(charge.reference);
@@ -162,6 +171,7 @@ exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
       return res.status(500).send("Internal server error");
     }
   } else {
+    // Ignore other event types
     return res.status(200).send("Event ignored");
   }
 });
