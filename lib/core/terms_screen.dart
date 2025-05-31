@@ -108,6 +108,6 @@ Limitation of Liability. To the fullest extent permitted by law, Xabe’s liabil
 We may update this EULA from time to time. When we do, we’ll post the new version with an updated “Effective Date.” Continued use of the App after that date constitutes acceptance of the revised EULA.
 
 Contact Us
-If you have questions or concerns about this EULA or need to appeal a moderation decision, please contact nubiarabo1@gmail.com.
+If you have questions or concerns about this EULA or need to appeal a moderation decision, please contact xabefounder@gmail.com.
   ''';
 }

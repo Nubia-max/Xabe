@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:in_app_purchase/in_app_purchase.dart'; // <-- Added for IAP
 
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 import 'package:xabe/models/community_model.dart';
@@ -33,6 +35,94 @@ class ModToolsScreen extends StatefulWidget {
 class _ModToolsScreenState extends State<ModToolsScreen> {
   bool _isUpgrading = false;
   bool _isWithdrawing = false;
+
+  final InAppPurchase _iap = InAppPurchase.instance;
+  late StreamSubscription<List<PurchaseDetails>> _subscription;
+  List<ProductDetails> _products = [];
+  bool _iapAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeIAP();
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+
+  void _initializeIAP() async {
+    _iapAvailable = await _iap.isAvailable();
+    if (!_iapAvailable) return;
+
+    const Set<String> ids = {
+      'premium_community_upgrade'
+    }; // Replace with your real product IDs
+    final response = await _iap.queryProductDetails(ids);
+    if (response.error == null) {
+      setState(() => _products = response.productDetails);
+    }
+
+    _subscription = _iap.purchaseStream.listen(
+      _listenToPurchaseUpdated,
+      onDone: () => _subscription.cancel(),
+      onError: (error) {
+        // handle error if needed
+      },
+    );
+  }
+
+  void _listenToPurchaseUpdated(
+      List<PurchaseDetails> purchaseDetailsList) async {
+    for (final purchaseDetails in purchaseDetailsList) {
+      if (purchaseDetails.status == PurchaseStatus.purchased) {
+        final verified = await _verifyPurchaseOnBackend(purchaseDetails);
+        if (verified) {
+          Get.snackbar('Success', 'Community upgraded to premium!');
+          setState(() => _isUpgrading = false);
+        } else {
+          Get.snackbar('Error', 'Purchase verification failed.');
+          setState(() => _isUpgrading = false);
+        }
+      } else if (purchaseDetails.status == PurchaseStatus.error) {
+        Get.snackbar(
+            'Error', purchaseDetails.error?.message ?? 'Purchase error');
+        setState(() => _isUpgrading = false);
+      }
+
+      if (purchaseDetails.pendingCompletePurchase) {
+        await _iap.completePurchase(purchaseDetails);
+      }
+    }
+  }
+
+  Future<bool> _verifyPurchaseOnBackend(PurchaseDetails purchaseDetails) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    try {
+      final receipt = purchaseDetails.verificationData.serverVerificationData;
+      final response = await http.post(
+        Uri.parse(
+            'https://us-central1-xabe-ai.cloudfunctions.net/verifyAppleIAP'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': user.uid,
+          'communityName': widget.community.name,
+          'bio': widget.community.bio ?? '',
+          'requiresVerification': widget.community.requiresVerification,
+          'receiptData': receipt,
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error verifying purchase on backend: $e');
+      return false;
+    }
+  }
 
   void _navigateToEditCommunity() {
     Get.toNamed('/edit-community/${Uri.encodeComponent(widget.community.id)}');
@@ -137,16 +227,62 @@ class _ModToolsScreenState extends State<ModToolsScreen> {
 
     setState(() => _isUpgrading = true);
 
-    final payload = {
-      'userId': user.uid,
-      'email': email,
-      'communityName': widget.community.name,
-      'bio': widget.community.bio ?? '',
-      'requiresVerification': widget.community.requiresVerification,
-    };
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      // Use Apple IAP on iOS
+      if (!_iapAvailable || _products.isEmpty) {
+        setState(() => _isUpgrading = false);
+        Get.snackbar('Error', 'Apple IAP products not available.');
+        return;
+      }
+      final product = _products.firstWhere(
+        (p) => p.id == 'premium_community_upgrade',
+        orElse: () => _products.first,
+      );
+      final purchaseParam = PurchaseParam(productDetails: product);
+      _iap.buyNonConsumable(purchaseParam: purchaseParam);
+    } else {
+      // Use existing Paystack HTTP payment on Android/Web
+      final success = await _startPremiumPaymentHttp(
+        userId: user.uid,
+        email: email,
+        communityName: widget.community.name,
+        bio: widget.community.bio ?? '',
+        requiresVerification: widget.community.requiresVerification,
+      );
 
+      setState(() => _isUpgrading = false);
+
+      if (success) {
+        Get.snackbar(
+          'Payment',
+          'Complete payment in your browser. Your community will be upgraded automatically.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        Get.snackbar('Error', 'Failed to initiate payment.');
+      }
+    }
+  }
+
+  Future<bool> _startPremiumPaymentHttp({
+    required String userId,
+    required String email,
+    required String communityName,
+    required String bio,
+    required bool requiresVerification,
+  }) async {
     const cloudFunctionUrl =
         'https://us-central1-xabe-ai.cloudfunctions.net/createPremiumPayment';
+
+    final payload = {
+      'userId': userId,
+      'email': email,
+      'communityName': communityName,
+      'bio': bio,
+      'requiresVerification': requiresVerification,
+    };
+
+    print('Calling createPremiumPayment with payload: $payload');
 
     try {
       final response = await http.post(
@@ -155,33 +291,45 @@ class _ModToolsScreenState extends State<ModToolsScreen> {
         body: jsonEncode(payload),
       );
 
-      if (response.statusCode != 200) {
-        final errorData = jsonDecode(response.body);
-        Get.snackbar(
-            'Error', errorData['error'] ?? 'Payment initialization failed.');
-        setState(() => _isUpgrading = false);
-        return;
-      }
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
-      final paymentUrl = data['paymentUrl'];
 
-      if (await canLaunch(paymentUrl)) {
-        await launch(paymentUrl);
+      if (response.statusCode == 200 && data['paymentUrl'] != null) {
+        final url = data['paymentUrl'];
+        if (await canLaunch(url)) {
+          await launch(url);
 
-        // Payment is done in browser, webhook will handle community upgrade
-        Get.snackbar(
-          'Payment',
-          'Complete payment in your browser. Your community will be upgraded automatically after successful payment.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
+          final bool? result = await showDialog<bool>(
+            context: Get.context!,
+            builder: (context) => AlertDialog(
+              title: const Text('Payment'),
+              content: const Text(
+                  'Complete your payment in the browser. Click Done when finished.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          );
+
+          if (result == true) {
+            Get.offAllNamed('/home');
+          }
+          return true;
+        } else {
+          throw 'Could not launch payment URL';
+        }
       } else {
-        Get.snackbar('Error', 'Could not launch payment page.');
+        print('Server error: ${data['error']}');
+        return false;
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to initiate payment: $e');
-    } finally {
-      setState(() => _isUpgrading = false);
+      print('HTTP payment error: $e');
+      return false;
     }
   }
 

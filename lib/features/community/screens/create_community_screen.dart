@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_functions/cloud_functions.dart';
@@ -6,8 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:xabe/core/common/loader.dart';
+import 'package:in_app_purchase/in_app_purchase.dart'; // <-- added
 
+import '../../../core/common/loader.dart';
 import '../../../core/utils/simple_filter.dart';
 import '../../../core/utils/utils.dart';
 import '../../../theme/theme_controller.dart';
@@ -31,12 +33,105 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   bool _purchasePending = false;
   bool _loading = false;
 
+  final InAppPurchase _iap = InAppPurchase.instance;
+  late StreamSubscription<List<PurchaseDetails>> _subscription;
+
+  List<ProductDetails> _products = [];
+
   @override
   void initState() {
     super.initState();
+    _initializeIAP();
   }
 
-  /// Starts premium payment via HTTP POST to your cloud function.
+  @override
+  void dispose() {
+    communityNameController.dispose();
+    bioController.dispose();
+    _subscription.cancel();
+    super.dispose();
+  }
+
+  void _initializeIAP() async {
+    final bool available = await _iap.isAvailable();
+    if (!available) {
+      // Store not available, you can show message if needed
+      return;
+    }
+
+    const Set<String> ids = {
+      'com.nubiarabo.xabe.premiumcommunity'
+    }; // your Apple product ID(s)
+    final ProductDetailsResponse response = await _iap.queryProductDetails(ids);
+    if (response.error != null) {
+      // handle error
+      return;
+    }
+    setState(() {
+      _products = response.productDetails;
+    });
+
+    _subscription = _iap.purchaseStream.listen(
+      _listenToPurchaseUpdated,
+      onDone: () => _subscription.cancel(),
+      onError: (error) {
+        // handle error here
+      },
+    );
+  }
+
+  void _listenToPurchaseUpdated(
+      List<PurchaseDetails> purchaseDetailsList) async {
+    for (final purchaseDetails in purchaseDetailsList) {
+      if (purchaseDetails.status == PurchaseStatus.purchased) {
+        final verified = await _verifyPurchaseOnBackend(purchaseDetails);
+        if (verified) {
+          Get.snackbar('Success', 'Premium community purchase verified!');
+          // Optionally navigate or refresh UI here
+        } else {
+          Get.snackbar('Error', 'Purchase verification failed.');
+        }
+      } else if (purchaseDetails.status == PurchaseStatus.error) {
+        Get.snackbar(
+            'Error', purchaseDetails.error?.message ?? 'Purchase error');
+      }
+
+      if (purchaseDetails.pendingCompletePurchase) {
+        await _iap.completePurchase(purchaseDetails);
+      }
+    }
+  }
+
+  Future<bool> _verifyPurchaseOnBackend(PurchaseDetails purchaseDetails) async {
+    try {
+      final receipt = purchaseDetails.verificationData.serverVerificationData;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+
+      final response = await http.post(
+        Uri.parse(
+            'https://us-central1-xabe-ai.cloudfunctions.net/verifyAppleIAP'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': user.uid,
+          'communityName': communityNameController.text.trim(),
+          'bio': bioController.text.trim(),
+          'requiresVerification': requiresVerification,
+          'receiptData': receipt,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Backend verification error: $e');
+      return false;
+    }
+  }
+
+  /// Your existing HTTP Paystack payment flow for Android/web
   Future<bool> startPremiumPaymentHttp({
     required String userId,
     required String email,
@@ -74,9 +169,8 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         if (await canLaunch(url)) {
           await launch(url);
 
-          // Show dialog to user after opening Paystack page
           final bool? result = await showDialog<bool>(
-            context: Get.context!, // Use Get.context or pass context explicitly
+            context: Get.context!,
             builder: (context) => AlertDialog(
               title: const Text('Payment'),
               content: const Text(
@@ -91,8 +185,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           );
 
           if (result == true) {
-            // Navigate to home screen after payment is done
-            Get.offAllNamed('/home'); // Change to your home route if different
+            Get.offAllNamed('/home');
           }
           return true;
         } else {
@@ -119,10 +212,9 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     final communityController = Get.find<CommunityController>();
 
     setState(() {
-      _purchasePending = true; // Show loading spinner
+      _purchasePending = true;
     });
 
-    // Check if community name exists (works for both regular and premium)
     final existingCommunities = await communityController.communityRepository
         .searchCommunity(name)
         .first;
@@ -142,9 +234,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       return;
     }
 
-    // Proceed with creation depending on community type
     if (_communityType == 'regular') {
-      // Regular community creation (no payment)
       await communityController.createCommunity(
         name,
         bioController.text.trim(),
@@ -157,7 +247,6 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       });
     } else if (_communityType == 'premium') {
       final user = FirebaseAuth.instance.currentUser;
-
       if (user == null) {
         setState(() {
           _purchasePending = false;
@@ -167,50 +256,63 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         return;
       }
 
-      final email = user.email;
-      if (email == null || email.isEmpty) {
+      if (Theme.of(context).platform == TargetPlatform.iOS) {
+        // iOS - use Apple IAP
+        if (_products.isEmpty) {
+          setState(() {
+            _purchasePending = false;
+          });
+          Get.snackbar('Error', 'Products not available in the store.');
+          return;
+        }
+        final product = _products.firstWhere(
+          (p) => p.id == 'premium_community_upgrade',
+          orElse: () => _products.first,
+        );
+        _buyProduct(product);
+      } else {
+        // Android/Web - use existing Paystack flow
+        final email = user.email;
+        if (email == null || email.isEmpty) {
+          setState(() {
+            _purchasePending = false;
+          });
+          Get.snackbar('Error', 'Your email is missing or invalid.');
+          return;
+        }
+
+        final success = await startPremiumPaymentHttp(
+          userId: user.uid,
+          email: email,
+          communityName: name,
+          bio: bioController.text.trim(),
+          requiresVerification: requiresVerification,
+        );
+
         setState(() {
           _purchasePending = false;
         });
-        Get.snackbar('Error', 'Your email is missing or invalid.');
-        return;
-      }
 
-      // Start payment
-      final success = await startPremiumPaymentHttp(
-        userId: user.uid,
-        email: email,
-        communityName: name,
-        bio: bioController.text.trim(),
-        requiresVerification: requiresVerification,
-      );
-
-      setState(() {
-        _purchasePending = false;
-      });
-
-      if (success) {
-        Get.snackbar(
-          'Payment',
-          'Please complete the payment in your browser. After successful payment, your premium community will be created automatically.',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      } else {
-        Get.snackbar('Error', 'Failed to initiate payment.');
+        if (success) {
+          Get.snackbar(
+            'Payment',
+            'Please complete the payment in your browser. After successful payment, your premium community will be created automatically.',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        } else {
+          Get.snackbar('Error', 'Failed to initiate payment.');
+        }
       }
     }
   }
 
-  @override
-  void dispose() {
-    communityNameController.dispose();
-    bioController.dispose();
-    super.dispose();
+  void _buyProduct(ProductDetails product) {
+    final purchaseParam = PurchaseParam(productDetails: product);
+    _iap.buyNonConsumable(purchaseParam: purchaseParam);
   }
 
   @override
   Widget build(BuildContext context) {
-    final communityController = Get.find<CommunityController>();
     final themeController = Get.find<ThemeController>();
     final isDarkMode = themeController.isDarkMode;
 
@@ -229,8 +331,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           ? const Loader()
           : Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: ListView(
                 children: [
                   const SizedBox(height: 30),
                   TextField(
@@ -298,13 +399,14 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Text(
-                        'Require ID verification for members to join',
-                        style: TextStyle(
-                            fontSize: 16,
-                            color: isDarkMode ? Colors.white : Colors.black),
+                      Expanded(
+                        child: Text(
+                          'Require ID verification for members to join',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: isDarkMode ? Colors.white : Colors.black),
+                        ),
                       ),
-                      const Spacer(),
                       Switch(
                         value: requiresVerification,
                         onChanged: (val) {
@@ -344,7 +446,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontStyle: FontStyle.italic,
-                        color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                        color: isDarkMode ? Colors.white70 : Colors.grey,
                       ),
                     ),
                   ),

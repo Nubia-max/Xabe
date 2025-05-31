@@ -2,12 +2,16 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const fetch = require("node-fetch");
 const crypto = require("crypto");
+
 const DEFAULT_AVATAR_URL = "assets/images/premium_logo.png";
 
 admin.initializeApp();
 
 const PAYSTACK_SECRET_KEY = "sk_live_081a6b72526a9c7fcda22c9f194272fa9ac84e23";
 
+/**
+ * Initialize Paystack payment for premium community upgrade/creation.
+ */
 exports.createPremiumPayment = functions.https.onRequest(async (req, res) => {
   const {userId, email, communityName, bio, requiresVerification} = req.body;
 
@@ -68,24 +72,31 @@ exports.createPremiumPayment = functions.https.onRequest(async (req, res) => {
   }
 });
 
-// Callable function to check if community name exists
-exports.checkCommunityNameExists =
- functions.https.onCall(async (data, context) => {
-   const {communityName} = data;
+/**
+ * Callable function to check if a community name exists.
+ */
+exports.checkCommunityNameExists = functions.https.onCall(
+    async (data, context) => {
+      const {communityName} = data;
 
-   if (!communityName) {
-     throw new
-     functions.https.HttpsError("invalid-argument", "Missing communityName");
-   }
+      if (!communityName) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "Missing communityName",
+        );
+      }
 
-   const communitiesRef = admin.firestore().collection("communities");
-   const snapshot =
-  await communitiesRef.where("name", "==", communityName).get();
+      const communitiesRef = admin.firestore().collection("communities");
+      const snapshot =
+      await communitiesRef.where("name", "==", communityName).get();
 
-   return {exists: !snapshot.empty};
- });
+      return {exists: !snapshot.empty};
+    },
+);
 
-// Paystack webhook handler to verify payment and create/upgrade community
+/**
+ * Paystack webhook to verify payment and create/upgrade premium community.
+ */
 exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
   // Verify webhook signature
   const hash = crypto
@@ -126,7 +137,7 @@ exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
         const communityDoc = existingCommunitySnapshot.docs[0];
         await communityDoc.ref.update({
           communityType: "premium",
-          bio, // Optionally update bio and requiresVerification on upgrade
+          bio,
           requiresVerification,
         });
 
@@ -151,12 +162,14 @@ exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        console.log(`Created premium community:
-         ${communityName} for user: ${userId}`);
+        console.log(
+            `Created premium community: ${communityName} for user: ${userId}`,
+        );
       }
 
       // Update payment status to successful
-      const paymentRef = admin.firestore()
+      const paymentRef = admin
+          .firestore()
           .collection("premiumPayments")
           .doc(charge.reference);
 
@@ -173,5 +186,125 @@ exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
   } else {
     // Ignore other event types
     return res.status(200).send("Event ignored");
+  }
+});
+
+const APPLE_PRODUCTION_VERIFY_URL = "https://buy.itunes.apple.com/verifyReceipt";
+const APPLE_SANDBOX_VERIFY_URL = "https://sandbox.itunes.apple.com/verifyReceipt";
+
+/**
+ * Verify Apple receipt with production and fallback sandbox endpoint.
+ *
+ * @param {string} receiptData Apple base64 encoded receipt data
+ * @return {Promise<Object>} Apple receipt verification response JSON
+ */
+async function verifyAppleReceipt(receiptData) {
+  const body = {
+    "receipt-data": receiptData,
+    "exclude-old-transactions": true,
+  };
+
+  let response = await fetch(APPLE_PRODUCTION_VERIFY_URL, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+
+  let data = await response.json();
+
+  if (data.status === 21007) {
+    response = await fetch(APPLE_SANDBOX_VERIFY_URL, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body),
+    });
+
+    data = await response.json();
+  }
+
+  return data;
+}
+
+/**
+ * Verify Apple IAP receipt, create/upgrade premium community,
+ * and record payment in Firestore.
+ */
+exports.verifyAppleIAP = functions.https.onRequest(async (req, res) => {
+  try {
+    const {userId, communityName, bio, requiresVerification, receiptData} =
+      req.body;
+
+    if (!userId || !communityName || !receiptData) {
+      return res.status(400).json({
+        error: "Missing required fields: userId, communityName or receiptData",
+      });
+    }
+
+    const appleResponse = await verifyAppleReceipt(receiptData);
+
+    if (appleResponse.status !== 0) {
+      return res.status(400).json({
+        error:
+        `Apple receipt verification failed with status:
+         ${appleResponse.status}`,
+      });
+    }
+
+    const communitiesRef = admin.firestore().collection("communities");
+    const existingCommunitySnapshot = await communitiesRef
+        .where("name", "==", communityName)
+        .get();
+
+    if (!existingCommunitySnapshot.empty) {
+      const communityDoc = existingCommunitySnapshot.docs[0];
+      await communityDoc.ref.update({
+        communityType: "premium",
+        bio: bio || "",
+        requiresVerification: !!requiresVerification,
+      });
+
+      console.log(`Upgraded community '${communityName}' to premium.`);
+    } else {
+      const communityRef = communitiesRef.doc();
+
+      await communityRef.set({
+        id: communityRef.id,
+        name: communityName,
+        bio: bio || "",
+        requiresVerification: !!requiresVerification,
+        communityType: "premium",
+        creatorUid: userId,
+        members: [userId],
+        mods: [userId],
+        bannedUsers: [],
+        pendingMembers: [],
+        avatar: "assets/images/premium_logo.png",
+        balance: 0.0,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(
+          `Created premium community '${communityName}' for user ${userId}.`,
+      );
+    }
+
+    const paymentsRef = admin.firestore().collection("premiumPayments");
+    await paymentsRef.add({
+      userId,
+      communityName,
+      bio: bio || "",
+      requiresVerification: !!requiresVerification,
+      paymentMethod: "apple_iap",
+      paymentStatus: "successful",
+      purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+      appleReceipt: receiptData,
+    });
+
+    return res.status(200).json({
+      message: "Receipt verified and community upgraded/created successfully",
+    });
+  } catch (error) {
+    console.error("Error verifying Apple IAP:", error);
+    return res.status(500).json({error: "Internal server error"});
   }
 });
