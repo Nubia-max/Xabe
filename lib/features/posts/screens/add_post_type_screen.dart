@@ -352,8 +352,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         file: bannerFile,
       )
           .then((_) {
-        setState(() {
-          isSharing = false;
+        if (!mounted) return;
+        setState(() => isSharing = false);
+        Future.delayed(const Duration(milliseconds: 100), () {
+          Get.offAllNamed('/home');
         });
       });
     } else if (widget.type == 'carousel' &&
@@ -392,8 +394,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         allowNonMembersToVote: allowNonMembersToVote,
       )
           .then((_) {
-        setState(() {
-          isSharing = false;
+        if (!mounted) return;
+        setState(() => isSharing = false);
+        Future.delayed(const Duration(milliseconds: 100), () {
+          Get.offAllNamed('/home');
         });
       });
     } else if (widget.type == 'carousel2' &&
@@ -413,8 +417,10 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         allowNonMembersToVote: allowNonMembersToVote,
       )
           .then((_) {
-        setState(() {
-          isSharing = false;
+        if (!mounted) return;
+        setState(() => isSharing = false);
+        Future.delayed(const Duration(milliseconds: 100), () {
+          Get.offAllNamed('/home');
         });
       });
     } else {
