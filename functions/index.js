@@ -23,7 +23,7 @@ exports.createPremiumPayment = functions.https.onRequest(async (req, res) => {
 
   const paystackPayload = {
     email,
-    amount: 50000, // amount in kobo (500 NGN)
+    amount: 500000, // amount in kobo (5000 NGN)
     reference,
     metadata: {
       userId,
@@ -58,7 +58,7 @@ exports.createPremiumPayment = functions.https.onRequest(async (req, res) => {
       bio,
       requiresVerification,
       status: "pending",
-      amount: 50000,
+      amount: 500000,
       reference,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
