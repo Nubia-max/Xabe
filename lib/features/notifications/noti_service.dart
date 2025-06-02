@@ -3,15 +3,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-/// Top-level background message handler
-/// Must be a top-level function to handle messages when app is in background/terminated
+/// Top-level background handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
-  final notiService = NotiService._privateConstructor();
-  await notiService._initPlugin();
-  await notiService.showNotification(
+  await NotiService().init();
+  NotiService().showNotification(
     id: message.hashCode,
     title: message.notification?.title,
     body: message.notification?.body,
@@ -19,97 +16,67 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 class NotiService {
-  // Singleton pattern
   NotiService._privateConstructor();
   static final NotiService _instance = NotiService._privateConstructor();
   factory NotiService() => _instance;
 
-  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  bool _initialized = false;
 
-  /// Initialize notifications and FCM handlers
-  Future<void> initNotification() async {
-    if (_initialized) return;
+  Future<void> init() async {
+    const AndroidInitializationSettings androidInitSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    await _initPlugin();
-
-    // Register background handler
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // Foreground message handler
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      await showNotification(
-        id: message.hashCode,
-        title: message.notification?.title,
-        body: message.notification?.body,
-      );
-    });
-
-    // Notification tap (when app in background and opened via notification)
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      // Handle navigation or other logic on tap
-      // e.g. Navigator.of(navigatorKey.currentContext!).pushNamed('/moderationQueue', arguments: message.data);
-    });
-
-    // Optionally handle initial message if app was launched by tap
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) {
-      // Handle initial tap
-      // e.g. Navigator.of(navigatorKey.currentContext!).pushNamed('/moderationQueue', arguments: initialMessage.data);
-    }
-
-    _initialized = true;
-  }
-
-  /// Internal plugin initialization
-  Future<void> _initPlugin() async {
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings(
+    final DarwinInitializationSettings iosInitSettings =
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    const settings = InitializationSettings(
-      android: androidInit,
-      iOS: iosInit,
+
+    InitializationSettings initSettings = InitializationSettings(
+      android: androidInitSettings,
+      iOS: iosInitSettings,
     );
-    await _notificationsPlugin.initialize(
-      settings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle local notification tap
-        // e.g. Navigator.of(navigatorKey.currentContext!).pushNamed('/moderationQueue');
-      },
-    );
+
+    await _flutterLocalNotificationsPlugin.initialize(initSettings);
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (message.notification != null) {
+        showNotification(
+          id: message.hashCode,
+          title: message.notification!.title,
+          body: message.notification!.body,
+        );
+      }
+    });
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
 
-  /// Build notification details (channel, importance, etc.)
-  NotificationDetails _buildNotificationDetails() {
-    const androidChannel = AndroidNotificationDetails(
-      'mod_notifications',
-      'Moderation Alerts',
-      channelDescription: 'Notifications for flagged content',
+  void showNotification({
+    required int id,
+    required String? title,
+    required String? body,
+  }) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'default_channel',
+      'General Notifications',
+      channelDescription: 'Used for basic community notifications',
       importance: Importance.max,
       priority: Priority.high,
+      ticker: 'ticker',
     );
-    const iosChannel = DarwinNotificationDetails();
-    return const NotificationDetails(
-      android: androidChannel,
-      iOS: iosChannel,
-    );
-  }
 
-  /// Show a local notification
-  Future<void> showNotification({
-    required int id,
-    String? title,
-    String? body,
-  }) async {
-    await _notificationsPlugin.show(
+    const NotificationDetails platformDetails =
+        NotificationDetails(android: androidDetails);
+
+    await _flutterLocalNotificationsPlugin.show(
       id,
       title,
       body,
-      _buildNotificationDetails(),
+      platformDetails,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -32,11 +33,15 @@ import 'package:xabe/features/notifications/notification_repository.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize notifications
-  NotiService().initNotification();
-
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  await NotiService().init();
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
 
   // Activate AppCheck only on mobile platforms
   if (!kIsWeb) {
@@ -80,13 +85,15 @@ Future<void> main() async {
     storageRepository: StorageRepository(firebaseStorage: firebaseStorage),
   ));
 
-  // Notifications repo & controller
-  final notificationRepository = NotificationRepository(firestore: firestore);
+  // Initialize NotiService
   final notiService = NotiService();
+  await notiService.init();
+
+// Notifications repo & controller
+  final notificationRepository = NotificationRepository(firestore: firestore);
   Get.put<NotificationRepository>(notificationRepository);
   Get.put<NotificationController>(NotificationController(
     notificationRepository: notificationRepository,
-    notiService: notiService,
   ));
 
   // --- Theme ---
