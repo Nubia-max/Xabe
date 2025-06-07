@@ -308,3 +308,26 @@ exports.verifyAppleIAP = functions.https.onRequest(async (req, res) => {
     return res.status(500).json({error: "Internal server error"});
   }
 });
+
+
+exports.sendPushNotification = functions.https.onCall(async (data, context) => {
+  const {title, body, fcmToken, dataPayload} = data;
+
+  const message = {
+    token: fcmToken,
+    notification: {
+      title,
+      body,
+    },
+    data: dataPayload || {}, // 👈 add deep link navigation here
+  };
+
+  try {
+    const response = await admin.messaging().send(message);
+    console.log("✅ Notification sent:", response);
+    return {success: true};
+  } catch (error) {
+    console.error("❌ Error sending notification:", error);
+    return {success: false, error: error.message};
+  }
+});

@@ -18,8 +18,8 @@ import 'package:uuid/uuid.dart';
 import '../../../core/failure.dart';
 import '../../../core/providers/storage_repository.dart';
 import '../../auth/controller/auth_controller.dart';
-import '../../community/controller/community_controller.dart';
 import '../../notifications/notification_controller.dart';
+import '../../notifications/push_notifications/push_notification_dispatcher.dart';
 import '../../user_profile/controller/user_profile_controller.dart';
 
 class PostController extends GetxController {
@@ -381,7 +381,8 @@ class PostController extends GetxController {
       type: isCarousel2 ? 'carousel2' : 'carousel',
       createdAt: DateTime.now(),
       imageUrls: imageUrls,
-      taggedUsers: flatRawTags, // for backward compatibility
+      taggedUsers: flatRawTags,
+      // for backward compatibility
       description: caption,
       electionEndTime: isCarousel2 ? null : electionEndTime!,
 
@@ -397,7 +398,7 @@ class PostController extends GetxController {
           selectedCommunity.communityType == 'premium' ? pricePerVote : 0,
       maxVotesPerPerson:
           selectedCommunity.communityType == 'premium' ? maxVotesPerPerson : 1,
-      allowNonMembersToVote: allowNonMembersToVote,
+      allowNonMembersToVote: allowNonMembersToVote, communityMembers: [],
     );
     final res = await _postRepository.addPost(post);
     isLoading.value = false;
@@ -493,6 +494,7 @@ class PostController extends GetxController {
           electionEndTime: DateTime.now(),
           communityId: selectedCommunity.id,
           showLiveResults: false,
+          communityMembers: [],
         );
 
         final res = await _postRepository.addPost(post);
@@ -641,10 +643,53 @@ class PostController extends GetxController {
             .toList());
   }
 
+  void checkElectionEndings() async {
+    final now = DateTime.now();
+
+    final postsSnapshot = await _firestore
+        .collection('posts')
+        .where('type', isEqualTo: 'carousel')
+        .where('electionEndTime', isLessThanOrEqualTo: now)
+        .where('electionEndedNotificationSent', isEqualTo: false)
+        .get();
+
+    for (final doc in postsSnapshot.docs) {
+      final post = Post.fromMap(doc.data());
+
+      for (final uid in post.communityMembers) {
+        if (uid != post.uid) {
+          final fcmToken = await getFcmToken(uid);
+          if (fcmToken != null) {
+            await PushNotificationDispatcher.sendNotification(
+              title: 'Election Ended',
+              body: '${post.title} has ended. Tap to view results.',
+              fcmToken: fcmToken,
+              dataPayload: {
+                'type': 'election_ended',
+                'postId': post.id,
+              },
+            );
+          }
+        }
+      }
+
+      // Update Firestore to mark notification sent
+      await _firestore.collection('posts').doc(post.id).update({
+        'electionEndedNotificationSent': true,
+      });
+    }
+  }
+
   /// Helper to convert Uint8List to File.
   File _convertUint8ListToFile(Uint8List bytes, String fileName) {
     final file = File('${Directory.systemTemp.path}/$fileName');
     file.writeAsBytesSync(bytes);
     return file;
+  }
+
+  Future<String?> getFcmToken(String userId) async {
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    return doc.data()?['fcmToken'] as String?;
   }
 }

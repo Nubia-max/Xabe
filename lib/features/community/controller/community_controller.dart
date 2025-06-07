@@ -17,6 +17,7 @@ import 'package:xabe/core/providers/storage_repository.dart';
 import 'package:xabe/features/auth/controller/auth_controller.dart';
 
 import '../../../core/constants/firebase_constants.dart';
+import '../../notifications/push_notifications/push_notification_dispatcher.dart';
 
 class CommunityBinding extends Bindings {
   @override
@@ -97,10 +98,13 @@ class CommunityController extends GetxController {
           community.id,
           user.uid,
         );
+
         res.fold(
           (failure) => showSnackBar(context, failure.message),
-          (_) {
+          (_) async {
+            // 🔔 Loop through mods and notify each one
             for (final modUid in community.mods) {
+              // 🔘 Local notification dispatch (optional)
               Get.find<NotificationController>().sendNotification(
                 recipientId: modUid,
                 senderId: user.uid,
@@ -111,7 +115,24 @@ class CommunityController extends GetxController {
                 communityName: community.name,
                 verificationImageUrl: verificationImageUrl,
               );
+
+              // 🔘 FCM push notification
+              final fcmToken =
+                  await getFcmToken(modUid); // define this function!
+              if (fcmToken != null) {
+                await PushNotificationDispatcher.sendNotification(
+                  title: 'Join Request',
+                  body: '${user.name} wants to join ${community.name}',
+                  fcmToken: fcmToken,
+                  dataPayload: {
+                    'type':
+                        'user_joined', // or 'join_request' if you handle this in app
+                    'communityId': community.id,
+                  },
+                );
+              }
             }
+
             showSnackBar(context, 'Join request sent. Awaiting approval.');
           },
         );
@@ -200,6 +221,19 @@ class CommunityController extends GetxController {
         showSnackBar(context, 'Join request sent. Awaiting approval.');
       },
     );
+    for (final modUid in community.mods) {
+      final fcmToken = await getFcmToken(modUid);
+      if (fcmToken != null) {
+        await PushNotificationDispatcher.sendNotification(
+          title: 'New Member Joined',
+          body: '${user.name} just joined ${community.name}',
+          fcmToken: fcmToken,
+          dataPayload: {
+            'type': 'user_joined',
+          },
+        );
+      }
+    }
   }
 
   Future<void> joinCommunityImmediately(Community community, String uid) async {
@@ -218,8 +252,38 @@ class CommunityController extends GetxController {
       // Update local model if you're holding state
       community.members.add(uid);
       community.pendingMembers.remove(uid);
+      update(); // if using GetBuilder or GetX
 
-      update(); // if using GetBuilder or GetX for UI updates
+      // 🔔 Notify user who was accepted
+      final fcmToken = await getFcmToken(uid);
+      if (fcmToken != null) {
+        await PushNotificationDispatcher.sendNotification(
+          title: 'Join Request Accepted',
+          body: 'You are now a member of ${community.name}',
+          fcmToken: fcmToken,
+          dataPayload: {
+            'type': 'join_accepted',
+            'communityId': community.id,
+          },
+        );
+      }
+
+      // 🔔 Notify mods (optional: or notify all members)
+      for (final modUid in community.mods) {
+        if (modUid != uid) {
+          final modFcm = await getFcmToken(modUid);
+          if (modFcm != null) {
+            await PushNotificationDispatcher.sendNotification(
+              title: 'New Member Joined',
+              body: '$uid has joined ${community.name}',
+              fcmToken: modFcm,
+              dataPayload: {
+                'type': 'user_joined',
+              },
+            );
+          }
+        }
+      }
     } catch (e) {
       print('Error joining community: $e');
     }
@@ -395,18 +459,34 @@ class CommunityController extends GetxController {
 
         // 4) Notify each of those—and only those
         for (final uid in justAdded) {
+          // Local in-app notification (optional)
           Get.find<NotificationController>().sendNotification(
             recipientId: uid,
             senderId: AuthController.to.userModel.value?.uid ?? 'system',
             senderName: 'System',
             message: "You have been added as a moderator in ${community.name}",
-            type: "new_mod",
+            type: "added_as_moderator",
             communityId: community.id,
             communityName: community.name,
           );
+
+          // 🔔 Push notification using FCM v1
+          final userFcmToken =
+              await getFcmToken(uid); // Implement this based on your setup
+          if (userFcmToken != null) {
+            await PushNotificationDispatcher.sendNotification(
+              title: 'Moderator Role Assigned',
+              body: 'You’ve been made a moderator in ${community.name}',
+              fcmToken: userFcmToken,
+              dataPayload: {
+                'type': 'added_as_moderator',
+                'communityId': community.id,
+              },
+            );
+          }
         }
 
-        // 5) Go back once it’s all done
+        // 5) Navigate back once it’s all done
         Get.back();
       },
     );
@@ -455,4 +535,10 @@ class CommunityController extends GetxController {
 
   // Optional: Local cache of communities.
   RxList<Community> userCommunitiesCache = <Community>[].obs;
+
+  Future<String?> getFcmToken(String uid) async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    return snapshot.data()?['fcmToken'] as String?;
+  }
 }

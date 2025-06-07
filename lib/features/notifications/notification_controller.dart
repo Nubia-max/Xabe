@@ -7,12 +7,6 @@ import 'notification_model.dart';
 import 'notification_repository.dart';
 
 // Import your custom push notification handlers
-import 'push_notifications/user_joined_push.dart';
-import 'push_notifications/join_accepted_push.dart';
-import 'push_notifications/election_started_push.dart';
-import 'push_notifications/new_post_push.dart';
-import 'push_notifications/election_ended_push.dart';
-import 'push_notifications/added_as_moderator_push.dart';
 
 class NotificationController extends GetxController {
   final NotificationRepository _notificationRepository;
@@ -55,44 +49,12 @@ class NotificationController extends GetxController {
 
         notifications.assignAll(fresh);
 
-        for (final n in newUnprocessed) {
-          _handlePush(n);
-          _shownNotificationIds
-              .add(n.id); // still helpful to avoid multiple triggers
-        }
-
         hasNewNotifications.value = notifications.any((n) => !n.isProcessed);
       },
       onError: (err) {
         print("Error loading notifications: $err");
       },
     );
-  }
-
-  void _handlePush(NotificationModel noti) {
-    final name = noti.communityName;
-    switch (noti.type) {
-      case 'join_request':
-        sendUserJoinedPush(noti.senderName, name);
-        break;
-      case 'join_accepted':
-        sendJoinAcceptedPush(name);
-        break;
-      case 'election_start':
-        sendElectionStartedPush(name);
-        break;
-      case 'new_post':
-        sendNewPostPush(name);
-        break;
-      case 'election_end':
-        sendElectionEndedPush(name);
-        break;
-      case 'new_mod':
-        sendAddedAsModeratorPush(name);
-        break;
-      default:
-        print('Unhandled notification type: ${noti.type}');
-    }
   }
 
   Future<Either<Failure, void>> markNotificationAsProcessed(
@@ -147,5 +109,23 @@ class NotificationController extends GetxController {
     }
     hasNewNotifications.value =
         notifications.any((n) => !n.isProcessed && n.type == 'join_request');
+  }
+
+  Future<String?> getFcmToken(String userId) async {
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    return doc.data()?['fcmToken'] as String?;
+  }
+
+  Future<String?> getFcmTokenForUser(String uid) async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final data = doc.data();
+      return data?['fcmToken'] as String?;
+    } catch (e) {
+      print('Error fetching FCM token for user $uid: $e');
+      return null;
+    }
   }
 }

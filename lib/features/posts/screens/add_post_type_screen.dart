@@ -11,6 +11,8 @@ import '../../../core/utils/simple_filter.dart';
 import '../../../core/utils/utils.dart';
 import '../../auth/controller/auth_controller.dart';
 import '../../community/controller/community_controller.dart';
+import '../../notifications/notification_controller.dart';
+import '../../notifications/push_notifications/push_notification_dispatcher.dart';
 import '../controller/post_controller.dart';
 
 class AddPostTypeScreen extends StatefulWidget {
@@ -383,9 +385,8 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         context: context,
         title: titleController.text.trim(),
         selectedCommunity: selectedCommunity!,
-
         files: carouselImages,
-        taggedUsers: transformedTags, // ✅ updated format
+        taggedUsers: transformedTags,
         caption: captionText,
         electionEndTime: electionEndTime,
         showLiveResults: showLiveProgress,
@@ -393,8 +394,34 @@ class _AddPostTypeScreenState extends State<AddPostTypeScreen> {
         maxVotesPerPerson: maxVotesPerPerson,
         allowNonMembersToVote: allowNonMembersToVote,
       )
-          .then((_) {
+          .then((_) async {
         if (!mounted) return;
+
+        // ✅ Send election started push to all members
+        final currentUser = Get.find<AuthController>().userModel.value;
+        final community = selectedCommunity!;
+        final members = community.members;
+
+        for (final uid in members) {
+          if (uid == currentUser?.uid) continue;
+
+          final token =
+              await Get.find<NotificationController>().getFcmTokenForUser(uid);
+
+          if (token != null) {
+            await PushNotificationDispatcher.sendNotification(
+              title: '🗳️ Election Started',
+              body:
+                  '${titleController.text.trim()} has started in ${community.name}',
+              fcmToken: token,
+              dataPayload: {
+                'type': 'election_started',
+                'communityId': community.id,
+              },
+            );
+          }
+        }
+
         setState(() => isSharing = false);
         Future.delayed(const Duration(milliseconds: 100), () {
           Get.offAllNamed('/home');

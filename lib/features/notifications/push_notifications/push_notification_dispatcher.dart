@@ -1,33 +1,34 @@
-import 'package:xabe/features/notifications/push_notifications/user_joined_push.dart';
-
-import 'added_as_moderator_push.dart';
-import 'election_ended_push.dart';
-import 'election_started_push.dart';
-import 'join_accepted_push.dart';
-import 'new_post_push.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class PushNotificationDispatcher {
-  static void userJoined(String username, String communityName) {
-    sendUserJoinedPush(username, communityName);
-  }
+  static const String serverKey =
+      'YOUR_FCM_SERVER_KEY'; // Replace with your real key
 
-  static void joinAccepted(String communityName) {
-    sendJoinAcceptedPush(communityName);
-  }
+  static Future<void> sendNotification({
+    required String title,
+    required String body,
+    required String fcmToken,
+    required Map<String, dynamic> dataPayload,
+  }) async {
+    final message = {
+      'to': fcmToken,
+      'notification': {
+        'title': title,
+        'body': body,
+      },
+      'data': dataPayload,
+    };
 
-  static void electionStarted(String communityName) {
-    sendElectionStartedPush(communityName);
-  }
+    final res = await http.post(
+      Uri.parse('https://fcm.googleapis.com/fcm/send'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'key=$serverKey',
+      },
+      body: jsonEncode(message),
+    );
 
-  static void newPost(String communityName) {
-    sendNewPostPush(communityName);
-  }
-
-  static void electionEnded(String communityName) {
-    sendElectionEndedPush(communityName);
-  }
-
-  static void addedAsModerator(String communityName) {
-    sendAddedAsModeratorPush(communityName);
+    print("🔔 FCM Response (${res.statusCode}): ${res.body}");
   }
 }

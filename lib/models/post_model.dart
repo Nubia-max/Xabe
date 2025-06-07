@@ -25,7 +25,8 @@ class Post {
   final bool showLiveResults;
   final int pricePerVote;
   final int maxVotesPerPerson;
-  final bool allowNonMembersToVote; // NEW field added here
+  final bool allowNonMembersToVote;
+  final List<String> communityMembers;
 
   Post({
     required this.id,
@@ -41,9 +42,10 @@ class Post {
     required this.type,
     required this.createdAt,
     required this.showLiveResults,
+    required this.communityMembers,
     this.pricePerVote = 0,
     this.maxVotesPerPerson = 1,
-    this.allowNonMembersToVote = false, // default to false
+    this.allowNonMembersToVote = false,
     List<String>? imageUrls,
     Map<String, List<int>>? userVotes,
     List<String>? taggedUsers,
@@ -88,6 +90,7 @@ class Post {
     int? pricePerVote,
     int? maxVotesPerPerson,
     bool? allowNonMembersToVote,
+    List<String>? communityMembers,
   }) {
     return Post(
       id: id ?? this.id,
@@ -116,6 +119,7 @@ class Post {
       maxVotesPerPerson: maxVotesPerPerson ?? this.maxVotesPerPerson,
       allowNonMembersToVote:
           allowNonMembersToVote ?? this.allowNonMembersToVote,
+      communityMembers: communityMembers ?? this.communityMembers,
     );
   }
 
@@ -145,7 +149,8 @@ class Post {
       'showLiveResults': showLiveResults,
       'pricePerVote': pricePerVote,
       'maxVotesPerPerson': maxVotesPerPerson,
-      'allowNonMembersToVote': allowNonMembersToVote, // new field saved here
+      'allowNonMembersToVote': allowNonMembersToVote,
+      'communityMembers': communityMembers,
     };
   }
 
@@ -188,8 +193,8 @@ class Post {
       showLiveResults: map['showLiveResults'] ?? false,
       pricePerVote: map['pricePerVote'] ?? 0,
       maxVotesPerPerson: map['maxVotesPerPerson'] ?? 1,
-      allowNonMembersToVote:
-          map['allowNonMembersToVote'] ?? false, // new field parsed here
+      allowNonMembersToVote: map['allowNonMembersToVote'] ?? false,
+      communityMembers: List<String>.from(map['communityMembers'] ?? []),
     );
   }
 
@@ -221,7 +226,8 @@ class Post {
             showLiveResults == other.showLiveResults &&
             pricePerVote == other.pricePerVote &&
             maxVotesPerPerson == other.maxVotesPerPerson &&
-            allowNonMembersToVote == other.allowNonMembersToVote);
+            allowNonMembersToVote == other.allowNonMembersToVote &&
+            listEquals(communityMembers, other.communityMembers));
   }
 
   @override
@@ -250,6 +256,7 @@ class Post {
         showLiveResults.hashCode ^
         pricePerVote.hashCode ^
         maxVotesPerPerson.hashCode ^
-        allowNonMembersToVote.hashCode;
+        allowNonMembersToVote.hashCode ^
+        communityMembers.hashCode;
   }
 }
