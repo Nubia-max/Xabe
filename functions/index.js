@@ -12,64 +12,68 @@ const PAYSTACK_SECRET_KEY = "sk_live_081a6b72526a9c7fcda22c9f194272fa9ac84e23";
 /**
  * Initialize Paystack payment for premium community upgrade/creation.
  */
-exports.createPremiumPayment = functions.https.onRequest(async (req, res) => {
-  const {userId, email, communityName, bio, requiresVerification} = req.body;
+const cors = require("cors")({origin: true});
 
-  if (!userId || !email || !communityName) {
-    return res.status(400).json({error: "Missing required data"});
-  }
+exports.createPremiumPayment = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    const {userId, email, communityName, bio, requiresVerification} = req.body;
 
-  const reference = `premium-upgrade-${userId}-${Date.now()}`;
-
-  const paystackPayload = {
-    email,
-    amount: 500000, // amount in kobo (5000 NGN)
-    reference,
-    metadata: {
-      userId,
-      communityName,
-      bio,
-      requiresVerification: requiresVerification.toString(),
-    },
-  };
-
-  try {
-    const response = await fetch(
-        "https://api.paystack.co/transaction/initialize",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${PAYSTACK_SECRET_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(paystackPayload),
-        },
-    );
-
-    const body = await response.json();
-
-    if (!body.status) {
-      return res.status(500).json({error: "Failed to initialize payment"});
+    if (!userId || !email || !communityName) {
+      return res.status(400).json({error: "Missing required data"});
     }
 
-    await admin.firestore().collection("premiumPayments").doc(reference).set({
-      userId,
-      communityName,
-      bio,
-      requiresVerification,
-      status: "pending",
+    const reference = `premium-upgrade-${userId}-${Date.now()}`;
+
+    const paystackPayload = {
+      email,
       amount: 500000,
       reference,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      metadata: {
+        userId,
+        communityName,
+        bio,
+        requiresVerification: requiresVerification.toString(),
+      },
+    };
 
-    return res.status(200).json({
-      paymentUrl: body.data.authorization_url,
-      reference,
-    });
-  } catch (error) {
-    return res.status(500).json({error: error.message || "Unknown error"});
-  }
+    try {
+      const response = await fetch(
+          "https://api.paystack.co/transaction/initialize",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${PAYSTACK_SECRET_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(paystackPayload),
+          },
+      );
+
+      const body = await response.json();
+
+      if (!body.status) {
+        return res.status(500).json({error: "Failed to initialize payment"});
+      }
+
+      await admin.firestore().collection("premiumPayments").doc(reference).set({
+        userId,
+        communityName,
+        bio,
+        requiresVerification,
+        status: "pending",
+        amount: 500000,
+        reference,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return res.status(200).json({
+        paymentUrl: body.data.authorization_url,
+        reference,
+      });
+    } catch (error) {
+      return res.status(500).json({error: error.message || "Unknown error"});
+    }
+  });
 });
 
 /**
