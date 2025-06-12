@@ -7,16 +7,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class TransactionHistoryScreen extends StatelessWidget {
   const TransactionHistoryScreen({Key? key}) : super(key: key);
 
+  // Update the stream to include web payments
   Stream<QuerySnapshot> _getTransactionsStream() {
     final userId = Get.find<AuthController>().userModel.value?.uid;
-    if (userId == null) {
-      return const Stream.empty();
-    }
+    if (userId == null) return const Stream.empty();
+
     return FirebaseFirestore.instance
-        .collection('transactions') // Replace with your collection name
+        .collection('transactions')
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
-        .snapshots();
+        .snapshots()
+        .handleError((error) {
+      print("Error fetching transactions: $error");
+      // You can optionally display an error message here instead of silently returning an empty stream.
+    });
   }
 
   String _formatDate(Timestamp timestamp) {
@@ -33,24 +37,41 @@ class TransactionHistoryScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: _getTransactionsStream(),
         builder: (context, snapshot) {
+          // Handle loading state
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // Handle error state
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Error loading transactions'),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Retry fetching transactions
+                      // No need for setState, as StreamBuilder will rebuild on data change
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
           }
 
+          // Handle empty data
           final docs = snapshot.data?.docs ?? [];
-
           if (docs.isEmpty) {
             return const Center(child: Text('No transactions found.'));
           }
 
           return RefreshIndicator(
             onRefresh: () async {
-              // You can trigger a manual reload here if needed.
               // Firestore snapshots auto-update, so this can be empty.
+              // If needed, you can manually trigger a refresh here.
               await Future.delayed(const Duration(milliseconds: 500));
             },
             child: ListView.separated(

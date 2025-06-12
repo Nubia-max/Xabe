@@ -2,9 +2,9 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const fetch = require("node-fetch");
 const crypto = require("crypto");
+const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 
 const DEFAULT_AVATAR_URL = "assets/images/premium_logo.png";
-
 admin.initializeApp();
 
 const PAYSTACK_SECRET_KEY = "sk_live_081a6b72526a9c7fcda22c9f194272fa9ac84e23";
@@ -13,6 +13,128 @@ const PAYSTACK_SECRET_KEY = "sk_live_081a6b72526a9c7fcda22c9f194272fa9ac84e23";
  * Initialize Paystack payment for premium community upgrade/creation.
  */
 const cors = require("cors")({origin: true});
+
+exports.paystackAddFundsWebhook = functions.https
+    .onRequest(async (req, res) => {
+      // Verify Paystack signature
+      const hash = crypto
+          .createHmac("sha512", PAYSTACK_SECRET_KEY)
+          .update(JSON.stringify(req.body))
+          .digest("hex");
+
+      if (hash !== req.headers["x-paystack-signature"]) {
+        console.error("Invalid Paystack signature");
+        return res.status(400).send("Invalid signature");
+      }
+
+      const event = req.body;
+
+      // Check if the event is a successful charge
+      if (event.event === "charge.success") {
+        const {reference, amount, metadata, customer} = event.data;
+
+        try {
+          // Get userId from metadata or fallback to email
+          let userId = (metadata && metadata.userId) ? metadata.userId : null;
+          const userEmail =(customer && customer.email) ? customer.email : null;
+
+          // If userId is missing, try to find by email
+          if (!userId && userEmail) {
+            const userSnapshot = await admin.firestore()
+                .collection("users")
+                .where("email", "==", userEmail)
+                .limit(1)
+                .get();
+
+            if (!userSnapshot.empty) {
+              userId = userSnapshot.docs[0].id;
+            }
+          }
+
+          // If userId is still not found, return error
+          if (!userId) {
+            console.error("User ID not found in metadata");
+            return res.status(400).send("User ID not found");
+          }
+
+          // Convert from kobo to Naira
+          const amountInNaira = amount / 100;
+
+          // Create transaction record
+          const transactionsRef = admin.firestore().collection("transactions");
+          await transactionsRef.add({
+            userId: userId,
+            amount: amountInNaira,
+            status: "success",
+            reference: reference,
+            paymentMethod: "card",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          // Create balance update record
+          const userBalanceUpdatesRef = admin.firestore()
+              .collection("userBalanceUpdates");
+          await userBalanceUpdatesRef.add({
+            userId: userId,
+            amount: amountInNaira,
+            reference: reference,
+            processed: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          console.log(`✅ Added transaction for user ${userId}`);
+          return res.status(200).send("Payment processed");
+        } catch (error) {
+          console.error("Error processing payment:", error);
+          return res.status(500).send("Internal server error");
+        }
+      }
+
+      return res.status(200).send("Event ignored");
+    });
+
+exports.processBalanceUpdates =
+onDocumentCreated("userBalanceUpdates/{docId}", async (event) => {
+  const snapshot = event.data;
+  if (!snapshot) return null;
+
+  const data = snapshot.data();
+  if (data.processed) return null;
+
+  const userId = data.userId;
+  const amount = data.amount;
+
+  const userRef = admin.firestore().collection("users").doc(userId);
+
+  try {
+    await admin.firestore().runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+
+      if (!userDoc.exists) {
+        throw new Error("User not found");
+      }
+
+      const userData = userDoc.data();
+      let currentBalance = 0;
+
+      if (userData && typeof userData.balance === "number") {
+        currentBalance = userData.balance;
+      }
+
+      const newBalance = currentBalance + amount;
+
+      transaction.update(userRef, {balance: newBalance});
+      transaction.update(snapshot.ref, {processed: true});
+    });
+
+    console.log(`💰 Updated balance for user ${userId}`);
+    return null;
+  } catch (error) {
+    console.error("Balance update failed:", error);
+    return null;
+  }
+});
+
 
 exports.createPremiumPayment = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
@@ -334,4 +456,50 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
     console.error("❌ Error sending notification:", error);
     return {success: false, error: error.message};
   }
+});
+
+exports.initAddFunds = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    const {userId, email, amount} = req.body;
+
+    if (!userId || !email || !amount) {
+      return res.status(400).json({error: "Missing required fields"});
+    }
+
+    const reference = `fund-${userId}-${Date.now()}`;
+
+    const payload = {
+      email,
+      amount: parseInt(amount), // amount in kobo
+      reference,
+      metadata: {
+        userId,
+      },
+    };
+
+    try {
+      const response = await fetch("https://api.paystack.co/transaction/initialize", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await response.json();
+
+      if (!body.status) {
+        return res.status(500).json({error: "Failed to initialize payment"});
+      }
+
+      return res.status(200).json({
+        paymentUrl: body.data.authorization_url,
+        reference,
+      });
+    } catch (err) {
+      console.error("Error initializing Paystack:", err);
+      return res.status(500).json({error: "Internal server error"});
+    }
+  });
 });

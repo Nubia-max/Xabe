@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pay_with_paystack/pay_with_paystack.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import '../auth/controller/auth_controller.dart';
 
@@ -15,87 +19,96 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
-
   bool _isLoading = false;
 
-  /// Records a transaction in Firestore
-  Future<void> _recordTransaction({
-    required String userId,
-    required double amount,
-    required String status,
-    required String reference,
-    String paymentMethod = 'card',
-  }) async {
-    final transactionsCollection =
-        FirebaseFirestore.instance.collection('transactions');
+  Future<void> _startPayment(int amountInKobo) async {
+    if (!mounted) return;
 
-    await transactionsCollection.add({
-      'userId': userId,
-      'amount': amount,
-      'status': status,
-      'reference': reference,
-      'paymentMethod': paymentMethod,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> _startPayment(int amountInMinorUnits) async {
     setState(() => _isLoading = true);
-
-    final uniqueTransRef = PayWithPayStack().generateUuidV4();
-
+    final uniqueReference = PayWithPayStack().generateUuidV4();
     final authController = Get.find<AuthController>();
-    final userEmail = authController.userModel.value?.email;
+    final user = authController.userModel.value;
 
-    if (userEmail == null || userEmail.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'User email not found, please update your profile.',
-      );
+    if (user == null || user.email.isEmpty) {
+      Get.snackbar('Error', 'User information missing.');
       setState(() => _isLoading = false);
-      return; // Stop if email is not available
+      return;
     }
 
-    final userId = authController.userModel.value?.uid ?? '';
-
     try {
-      await PayWithPayStack().now(
-        context: context,
-        secretKey:
-            'sk_live_081a6b72526a9c7fcda22c9f194272fa9ac84e23', // Replace with your secret key
-        customerEmail: userEmail,
-        reference: uniqueTransRef,
-        currency: 'NGN',
-        amount: amountInMinorUnits.toDouble(),
-        callbackUrl: '',
+      if (kIsWeb) {
+        /// Web flow: Call Firebase Function to initialize payment
+        final response = await http.post(
+          Uri.parse(
+              'https://us-central1-xabe-ai.cloudfunctions.net/initAddFunds'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': user.email,
+            'amount': amountInKobo,
+            'userId': user.uid,
+          }),
+        );
 
-        transactionCompleted: (paymentData) async {
-          debugPrint('Payment completed: $paymentData');
-          Get.snackbar('Success', 'Payment successful!');
+        if (response.statusCode != 200) {
+          throw 'Unable to initiate payment. Try again later.';
+        }
 
-          final paidAmount = amountInMinorUnits / 1.0;
+        final data = jsonDecode(response.body);
+        final paystackUrl = data['paymentUrl'];
+        final reference = data['reference'];
 
-          // Save transaction record to Firestore
-          await _recordTransaction(
-            userId: userId,
-            amount: paidAmount,
-            status: 'success',
-            reference: uniqueTransRef,
-            paymentMethod: 'card', // or set dynamically if needed
-          );
+        if (await canLaunch(paystackUrl)) {
+          await launch(paystackUrl);
 
-          // Update user balance
-          await authController.addFundsToUserBalance(paidAmount);
+          // Listen for transaction update
+          FirebaseFirestore.instance
+              .collection('transactions')
+              .where('reference', isEqualTo: reference)
+              .snapshots()
+              .listen((snapshot) async {
+            if (snapshot.docs.isNotEmpty) {
+              await authController.reloadUser();
+              Get.back(result: true);
+              Get.snackbar('Success', 'Funds added successfully!');
+            }
+          });
+        } else {
+          throw 'Could not open Paystack payment page.';
+        }
+      } else {
+        /// Mobile flow using plugin
+        await PayWithPayStack().now(
+          context: context,
+          secretKey: 'sk_live_081a6b72526a9c7fcda22c9f194272fa9ac84e23',
+          customerEmail: user.email,
+          reference: uniqueReference,
+          currency: 'NGN',
+          amount: amountInKobo.toDouble(),
+          transactionCompleted: (paymentData) async {
+            final amountInNaira = amountInKobo / 100.0;
 
-          Navigator.pop(context, true);
-        },
-        transactionNotCompleted: (reason) {
-          debugPrint('Transaction failed: $reason');
-          Get.snackbar('Failed', 'Payment failed: $reason');
-        },
-      );
+            await FirebaseFirestore.instance.collection('transactions').add({
+              'userId': user.uid,
+              'amount': amountInNaira,
+              'status': 'success',
+              'reference': uniqueReference,
+              'paymentMethod': 'paystack',
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+
+            await authController.addFundsToUserBalance(amountInNaira);
+            await authController.reloadUser();
+            Navigator.pop(context, true);
+            Get.snackbar('Success', 'Payment completed!');
+          },
+          transactionNotCompleted: (reason) {
+            Get.snackbar('Failed', reason);
+          },
+          callbackUrl: '',
+        );
+      }
     } catch (e) {
-      Get.snackbar('Error', 'Error: $e');
+      Get.snackbar('Error', e.toString());
     } finally {
       setState(() => _isLoading = false);
     }
@@ -105,12 +118,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       final amount = double.tryParse(_amountController.text.trim());
       if (amount == null || amount <= 0) {
-        Get.snackbar('Error', 'Please enter a valid amount');
+        Get.snackbar('Error', 'Enter a valid amount');
         return;
       }
-      final amountInMinorUnits =
-          (amount * 1).toInt(); // Paystack expects amount in kobo
-      _startPayment(amountInMinorUnits);
+      final amountInKobo = (amount * 100).toInt(); // Convert ₦ to kobo
+      _startPayment(amountInKobo);
     }
   }
 
@@ -123,9 +135,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Funds'),
-      ),
+      appBar: AppBar(title: const Text('Add Funds')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -141,12 +151,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Amount is required';
-                  }
-                  final amount = double.tryParse(value.trim());
+                  final amount = double.tryParse(value ?? '');
                   if (amount == null || amount <= 0) {
-                    return 'Enter a valid amount greater than 0';
+                    return 'Enter a valid amount';
                   }
                   return null;
                 },
